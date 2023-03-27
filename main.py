@@ -24,14 +24,39 @@ class Body:
     def gravity(self, body):
         r = body.position - self.position
         self.acceleration += r * (G * body.mass / np.linalg.norm(r)**3)  # a_s = F/m_s = G * (m_b * m_s)/r*2 *(1 / m_s)
+
+class Spaceship(Body):
+    speed = 1
+
+    def __init__(self, position, velocity, color):
+        super().__init__(0, position, velocity, color)
+        self.actions = [self.thrust_up, self.thrust_down, self.thrust_left, self.thrust_right]
+    
+    # Accepts int for each of 4 possible actions
+    def do_action(self, id):
+        self.actions[id]()
+
+    def thrust_up(self):
+        self.position += np.array([0, Spaceship.speed], dtype=float)
+    
+    def thrust_down(self):
+        self.position += np.array([0, -Spaceship.speed], dtype=float)
+
+    def thrust_left(self):
+        self.position += np.array([-Spaceship.speed, 0], dtype=float)
+
+    def thrust_right(self):
+        self.position += np.array([Spaceship.speed, 0], dtype=float)
     
 
 star = Body(30, np.array([0, 0], dtype=float), np.array([0, 0], dtype=float), 'orange')
 planet = Body(0, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
+spaceship = Spaceship(np.array([0, 160], dtype=float), np.array([1.25, 0], dtype=float), 'black')
 
-bodies = [star, planet]
+bodies = [star, planet, spaceship]
 
 def update():
+    spaceship.do_action(3)
     # do steps
     for body in bodies:
         body.pos_x.append(body.position[0])

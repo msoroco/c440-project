@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from sim import Body, Spaceship
 
+BOX_WIDTH = 10
+GRID_R_BOXES = 10
+DRAW_NEIGHBOURHOOD = True
+
 star = Body(30, np.array([0, 0], dtype=float), np.array([0, 0], dtype=float), 'orange')
 planet = Body(0, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
 spaceship = Spaceship(np.array([0, 160], dtype=float), np.array([1.25, 0], dtype=float), 'black')
@@ -32,6 +36,9 @@ def get_state(agent, objective, bodies, grid_r_boxes, box_width, frames=4, step_
                 obstacle_grid[index[1], 2*grid_r_boxes - index[0]] = 1
     return np.stack((obstacle_grid, objective_grid), axis=0)           
 
+## example 
+# grid = get_state(spaceship, objective, bodies, GRID_R_BOXES, BOX_WIDTH)
+# print(grid)
 
 T = 15000
 for t in range(T):
@@ -52,8 +59,17 @@ def animate(end):
     ax.cla()
     for body in bodies:
         ax.plot(body.history[start:end, 0], body.history[start:end, 1], ".", color=body.color)
+        if isinstance(body, Spaceship) and DRAW_NEIGHBOURHOOD:
+            rect = drawShipneighbourhood(body.history[end])
+            ax.add_patch(rect)
     ax.set_xlim(-300, 300)
     ax.set_ylim(-300, 300)
+
+def drawShipneighbourhood(position):
+    radius = (GRID_R_BOXES + 0.5) * BOX_WIDTH
+    rectangle = plt.Rectangle((position[0] - radius, position[1] - radius), 2*radius, 2*radius, fill=False)
+    return rectangle
+
 
 anim = animation.FuncAnimation(fig, animate, frames = T + 1, interval = 1, blit = False)
 plt.show()

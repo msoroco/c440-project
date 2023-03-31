@@ -1,82 +1,118 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib import animation
-from sim import Body, Spaceship
+import random
+from simulator import Body, Spaceship, Simulator
+from animation import SimAnimation
+from replay import Transition, ReplayMemory
+from model import DQN
+from itertools import count
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 BOX_WIDTH = 20
 GRID_RADIUS = 8
 DRAW_NEIGHBOURHOOD = True
 
-# grid_radius = number of boxes from the center
-# TODO: add new channels for past frames
-def get_state(agent, objective, bodies, grid_radius, box_width, frames=4, step_size=1):
-    radius = (grid_radius + 0.5) * box_width
-    obstacle_grid = np.zeros((2*grid_radius+1, 2*grid_radius+1))
-    objective_grid = np.zeros((2*grid_radius+1, 2*grid_radius+1))
-    # assign objective
-    # transform and shift to bottom left corner
-    position = (objective - agent.position)
-    # TODO: rotation goes here
-    position = position + radius*np.ones(2)
-    index = np.clip(np.floor(position/box_width).astype(int), 0, 2*grid_radius)
-    objective_grid[index[0], index[1]] = 1
-    # TODO: python-ize this (probably easy)
-    for body in bodies:
-        if body != agent:
-            position = body.position - agent.position
-            # TODO: rotation goes here
-            if np.max(np.abs(position)) <= radius:
-                position = position + radius*np.ones(2)
-                index = np.clip(np.floor(position/box_width).astype(int), 0, 2*grid_radius)
-                obstacle_grid[index[0], index[1]] = 1
-    return np.stack((obstacle_grid, objective_grid), axis=0)    
-## example 
-# grid = get_state(spaceship, objective, bodies, GRID_RADIUS, BOX_WIDTH)
-       
 
-star = Body(30, np.array([0, 0], dtype=float), np.array([0, 0], dtype=float), 'orange')
-planet = Body(0.00009, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
-spaceship = Spaceship(np.array([0, 160], dtype=float), np.array([1.25, 0], dtype=float), 'black')
-objective = np.array([-100, -100], dtype=float)
+def select_action(state, time_step):
+    sample = random.random()
+    # exponential exploration/exploitation tradeoff
+    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
+    if sample > eps_threshold:
+        with torch.no_grad():
+            return policy_net(state).argmax(1)
+    else:
+        return random.randint(0, n_actions-1)
+    
 
-bodies = [star, planet, spaceship]
-states = [get_state(spaceship, objective, bodies, GRID_RADIUS, BOX_WIDTH)]
+def train():
+    # Sample batch for all Transition elements (and a mask for final states)
+    state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = memory.sample(BATCH_SIZE).to(device)
 
-T = 1500
-for t in range(T):
-    # spaceship.do_action(3)
-    # do steps
-    for body in bodies:
-        body.step()
-    # add state to states
-    states.append(get_state(spaceship, objective, bodies, GRID_RADIUS, BOX_WIDTH))
-    # update accelerations
-    for body1 in bodies:
-        for body2 in bodies:
-            if body1 != body2:
-                body1.gravity(body2)
+    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
+    # columns of actions taken. These are the actions which would've been taken
+    # for each batch state according to policy_net
+    state_action_values = policy_net(state_batch).gather(1, action_batch)
 
-fig, ax = plt.subplots(1, 1, figsize = (6, 6))
+    # Compute V(s_{t+1}) for all next states.
+    # Expected values of actions for next_state_batch are computed based
+    # on the "older" target_net; selecting their best reward with max(1)[0].
+    # This is merged based on the mask, such that we'll have either the expected
+    # state value or 0 in case the state was final.
+    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    with torch.no_grad():
+        next_state_values[~final_state_mask] = target_net(next_state_batch).max(1)[0]
+    # Compute the expected Q values
+    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
-def animate(end):
-    start = max(0, end-100)
-    ax.cla()
-    for body in bodies:
-        ax.plot(body.history[start:end+1, 0], body.history[start:end+1, 1], ".", color=body.color)
-        if isinstance(body, Spaceship) and DRAW_NEIGHBOURHOOD:
-            draw_state(states[end], body.history[end], ax)
-    ax.set_xlim(-300, 300)
-    ax.set_ylim(-300, 300)
+    # Compute Huber loss
+    loss = loss_fn(state_action_values, expected_state_action_values.unsqueeze(1))
+
+    # Optimize the model
+    optimizer.zero_grad()
+    loss.backward()
+    # In-place gradient clipping
+    torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
+    optimizer.step()
+
+    
+def testing_sandbox():
+    memory = ReplayMemory(5)
+    for i in range(10):
+        memory.push(np.random.rand(2, 10, 10), random.randint(0, 4), np.random.rand(2, 10, 10), -1)
+    
+    print(memory.sample(2))
 
 
-def draw_state(state, position, ax):
-    position = position - np.ones(2) * (GRID_RADIUS + 0.5) * BOX_WIDTH
-    for i in range(0, 2*GRID_RADIUS+1):
-        for j in range(0, 2*GRID_RADIUS+1):
-            if state[0, i, j] == 1:
-                ax.add_patch(plt.Rectangle((position[0] + i*BOX_WIDTH, position[1] + j*BOX_WIDTH), BOX_WIDTH, BOX_WIDTH, fill=True))
-            ax.add_patch(plt.Rectangle((position[0] + i*BOX_WIDTH, position[1] + j*BOX_WIDTH), BOX_WIDTH, BOX_WIDTH, fill=False))
+if __name__ == '__main__':
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-anim = animation.FuncAnimation(fig, animate, frames = T+1, interval = 1)
-plt.show()
+    # TODO: make this command line args
+    BATCH_SIZE = 128
+    GAMMA = 0.99
+    EPS_START = 0.9
+    EPS_END = 0.05
+    EPS_DECAY = 1000
+    TAU = 0.005
+    LR = 1e-4
+    MAX_STEPS = 10000
+
+    sim = Simulator("./sim1.json")
+    state_shape, n_actions = sim.info()
+
+    policy_net = DQN(state_shape, n_actions).to(device)
+    target_net = DQN(state_shape, n_actions).to(device)
+    target_net.load_state_dict(policy_net.state_dict())
+
+    loss_fn = nn.SmoothL1Loss()
+    optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
+    memory = ReplayMemory(10000)
+
+    for i_episode in range(1):
+        # Initialize simulation
+        state = sim.start()
+        for t in MAX_STEPS:
+            action = select_action(state)
+            next_state, reward = sim.step(action) # TODO: return None for final states
+
+            # Store the transition in memory
+            memory.push(state, action, next_state, reward)
+
+            # Move to the next state
+            state = next_state
+
+            # Perform one step of the optimization (on the policy network)
+            train()
+
+            # Soft update of the target network's weights
+            # θ′ ← τ θ + (1 −τ )θ′
+            target_net_state_dict = target_net.state_dict()
+            policy_net_state_dict = policy_net.state_dict()
+            for key in policy_net_state_dict:
+                target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+            target_net.load_state_dict(target_net_state_dict)
+
+            if next_state is None:
+                break

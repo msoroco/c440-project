@@ -54,6 +54,9 @@ class environment:
                 self.bodies[body] = Body(self.planet_mass, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
         self.bodies.insert(0, self.agent)
         
+        # TODO: change this to use rng
+        self.objective = np.array([-100, -100], dtype=float)
+        
         return
     
     # TODO: if necessary

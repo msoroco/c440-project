@@ -25,7 +25,7 @@ class Simulator:
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
         self.frames = json_obj["frames"]
-        self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # to avoid recomputation
+        self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
         pass
 
 
@@ -71,15 +71,15 @@ class Simulator:
         obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
         objective_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
 
-        # assign objective
-        # transform and shift to bottom left corner
+        # Assign objective
+        # Transform and shift to bottom left corner of grid
         position = (self.objective - self.agent.position)
         # TODO: rotation goes here
         position = position + radius*np.ones(2)
         index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
         objective_grid[index[1], index[0]] = 1
 
-        # assign obstacles
+        # Assign obstacles
         for body in self.bodies:
             if body != self.agent:
                 position = body.position - self.agent.position
@@ -89,18 +89,18 @@ class Simulator:
                     index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
                     obstacle_grid[index[1], index[0]] = 1
 
-        # create state       
+        # Create state       
         frame = np.stack((obstacle_grid, objective_grid), axis=0)
         state = frame
 
-        # attach past states
+        # Attach past states
         for i in range(self.frames):
             if len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[(i+1)*self.frame_stride - 1]))
         self.past_frames.append(frame)
         return state
     
-    
+
     def __load_json(filepath):
         with open(filepath) as json_file:
             json_obj = json.load(json_file)
@@ -135,11 +135,11 @@ class Spaceship(Body):
         super().__init__(0, position, velocity, color)
         self.actions = [self.thrust_up, self.thrust_down, self.thrust_left, self.thrust_right]
     
-    # accepts int for each of 4 possible actions
+    # Accepts int for each of 4 possible actions
     def do_action(self, id):
         if id < len(self.actions):
             self.actions[id]()
-        # if given id greater than 4, do nothing
+        # If given id greater than 4, do nothing
 
     def thrust_up(self):
         self.position += np.array([0, Spaceship.speed], dtype=float)

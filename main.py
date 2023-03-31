@@ -56,14 +56,6 @@ def train():
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
-    
-def testing_sandbox():
-    memory = ReplayMemory(5)
-    for i in range(10):
-        memory.push(np.random.rand(2, 10, 10), random.randint(0, 4), np.random.rand(2, 10, 10), -1)
-    
-    print(memory.sample(2))
-
 
 if __name__ == '__main__':
 

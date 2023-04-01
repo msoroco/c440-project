@@ -16,9 +16,20 @@ class Simulator:
         ----------
         filepath : str
             Path to json file
+
+        json file attributes
+        ---------
+        * grid_radius: The width & height in coordinates of the square frame around agent.
+        * box_width: The width & height of a unit coordinate in the vector space.
+        * frames: The number of past frames agent will maintain in addition to its observed frame.
+        * frame_stride: The number of time steps between the frames the agent maintains.
+        * tolerance: The distance (in coordinates) to objective within which agent must achieve.
+        * agent:
+        * objective: length 2 array of coordinate of the objective
+        * bodies:
         """
         json_obj = Simulator.__load_json(filepath)
-        self.json_obj = json_obj
+        self._json_obj = json_obj
         self.agent = None
         self.bodies = []
         self.objective = None
@@ -27,18 +38,17 @@ class Simulator:
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
         self.frames = json_obj["frames"]
-        self.past_states = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
-
-        # tolerance: How close to goal agent must reach to be considered done. Defaults to box_width
+        self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
         self.tolerance = self.box_width
-        pass
 
 
     def info(self):
         """
         Returns the number of actions (including do nothing) and the shape of states
         """
-        return None, None
+        n_actions = len(self.agent.actions) + 1
+
+        return n_actions, self.__current_state_shape
     
 
     def start(self, seed=None):
@@ -52,17 +62,17 @@ class Simulator:
         # TODO: change this to use rng if NONE
         # position = np.array([0, 160], dtype=float)
         # velocity = np.array([1.25, 0], dtype=float)
-        self.agent = Spaceship(** self.json_obj["agent"])
+        self.agent = Spaceship(** self._json_obj["agent"])
 
         # TODO: change this to use rng if NONE
-        bodies_list = self.json_obj["bodies"]
+        bodies_list = self._json_obj["bodies"]
         for body in bodies_list:
             self.bodies.append(Body(**body))
         self.bodies.insert(0, self.agent)
         
         # TODO: change this to use rng if NONE
         # self.objective = np.array([-100, -100], dtype=float)
-        self.objective = np.array(self.json_obj["objective"])
+        self.objective = np.array(self._json_obj["objective"])
         return None
     
 
@@ -70,7 +80,7 @@ class Simulator:
         """
         Continues the simulation by one step with the given action
 
-        Returns the next state and reward and done
+        Returns the next state and reward and whether objective is reached
         """
         self.agent.do_action(action)
         for body in self.bodies:
@@ -81,8 +91,8 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        terminated = (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
         reward = self.__get_reward()
+        terminated = (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
         return state, reward, terminated
     
 
@@ -92,14 +102,16 @@ class Simulator:
     
 
     def __get_state(self):
+        frame = self.__get_current_frame()
         # Create state
-        state = self.__get_current_frame()
-
-        # Attach past states
+        state = frame
+        # Attach past frames
         for i in range(self.frames):
-            if len(self.past_states) >= (i+1)*self.frame_stride:
-                state = np.concatenate((state, self.past_states[(i+1)*self.frame_stride - 1]))
-        self.past_states.append(state)
+            if len(self.past_frames) >= (i+1)*self.frame_stride:
+                state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
+        # update info
+        self.past_frames.append(frame) # deque will automatically evict oldest frame if full
+        self.__current_state_shape = state.shape
         return state
     
 
@@ -126,10 +138,11 @@ class Simulator:
                     index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
                     obstacle_grid[index[1], index[0]] = 1
 
-        # Create state       
+        # Create frame       
         frame = np.stack((obstacle_grid, objective_grid), axis=0)
         return frame
     
+    # for animation. May not be needed
     def get_current_frame(self):
         return self.__get_current_frame()
 

@@ -2,7 +2,6 @@ import statistics
 import numpy as np
 import os
 import json
-import random
 from collections import deque
 
 G = 6.6
@@ -19,25 +18,14 @@ class Simulator:
         """
         json_obj = Simulator.__load_json(filepath)
         self.agent = None
-        self.bodies = []
+        self.bodies = None
         self.objective = None
-
-        self.bodies_list = json_obj["bodies"]
-
-
-        self.agent_colour = 'black'
-        self.star_mass = 30
-        self.planet_mass = 0.00009
-
         # State information
         self.grid_radius = json_obj["grid_radius"]
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
         self.frames = json_obj["frames"]
-        self.past_states = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
-
-        # tolerance: How close to goal agent must reach to be considered done. Defaults to box_width
-        self.tolerance = self.box_width
+        self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
         pass
 
 
@@ -48,29 +36,12 @@ class Simulator:
         return None, None
     
 
-    def start(self, seed=None):
+    def start(self):
         """
         Initializes all simulation elements to starting positions
 
         Returns state
         """
-        if seed is not None:
-            random.seed(seed)
-        # TODO: change this to use rng
-        position = np.array([0, 160], dtype=float)
-        velocity = np.array([1.25, 0], dtype=float)
-        self.agent = Spaceship(position, velocity, self.agent_colour)
-
-        # TODO: change this to use rng
-        for body in self.bodies_list:
-            if self.bodies_list[body] == 'star':
-                self.bodies[body] = Body(self.star_mass, np.array([0, 0], dtype=float), np.array([0, 0], dtype=float), 'orange')
-            if self.bodies_list[body] == 'planet':
-                self.bodies[body] = Body(self.planet_mass, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
-        self.bodies.insert(0, self.agent)
-        
-        # TODO: change this to use rng
-        self.objective = np.array([-100, -100], dtype=float)
         return None
     
 
@@ -78,40 +49,24 @@ class Simulator:
         """
         Continues the simulation by one step with the given action
 
-        Returns the next state and reward and done
+        Returns the next state and reward
         """
-        self.agent.do_action(action)
-        for body in self.bodies:
-            body.step()
-        for body1 in self.bodies:
-            for body2 in self.bodies:
-                if body1 != body2:
-                    body1.gravity(body2)
-
-        state = self.__get_state()
-        terminated = (abs(self.objective - self.agent.position) < self.tolerance)
-        reward = self.__get_reward()
-        return state, reward, terminated
+        # spaceship.do_action(3)
+        # for body in bodies:
+        #     body.step()
+        # statistics.append(get_state(spaceship, objective, bodies, GRID_RADIUS, BOX_WIDTH))
+        # for body1 in bodies:
+        #     for body2 in bodies:
+        #         if body1 != body2:
+        #             body1.gravity(body2)
+        return None, None
     
 
     def __get_reward(self):
-        return 1/ abs(self.objective - self.agent.position)
-        # return None
+        return None
     
 
     def __get_state(self):
-        # Create state
-        state = self.__get_current_frame()
-
-        # Attach past states
-        for i in range(self.frames):
-            if len(self.past_states) >= (i+1)*self.frame_stride:
-                state = np.concatenate((state, self.past_states[(i+1)*self.frame_stride - 1]))
-        self.past_states.append(state)
-        return state
-    
-
-    def __get_current_frame(self):
         radius = (self.grid_radius + 0.5) * self.box_width
         obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
         objective_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
@@ -136,7 +91,14 @@ class Simulator:
 
         # Create state       
         frame = np.stack((obstacle_grid, objective_grid), axis=0)
-        return frame
+        state = frame
+
+        # Attach past states
+        for i in range(self.frames):
+            if len(self.past_frames) >= (i+1)*self.frame_stride:
+                state = np.concatenate((state, self.past_frames[(i+1)*self.frame_stride - 1]))
+        self.past_frames.append(frame)
+        return state
     
 
     def __load_json(filepath):

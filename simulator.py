@@ -81,7 +81,7 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        terminated = (abs(self.objective - self.agent.position) < self.tolerance)
+        terminated = (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
         reward = self.__get_reward()
         return state, reward, terminated
     
@@ -130,6 +130,8 @@ class Simulator:
         frame = np.stack((obstacle_grid, objective_grid), axis=0)
         return frame
     
+    def get_current_frame(self):
+        return self.__get_current_frame()
 
     def __load_json(filepath):
         with open(filepath) as json_file:

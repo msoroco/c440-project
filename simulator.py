@@ -18,17 +18,10 @@ class Simulator:
             Path to json file
         """
         json_obj = Simulator.__load_json(filepath)
+        self.json_obj = json_obj
         self.agent = None
         self.bodies = []
         self.objective = None
-
-        self.bodies_list = json_obj["bodies"]
-
-
-        self.agent_colour = 'black'
-        self.star_mass = 30
-        self.planet_mass = 0.00009
-
         # State information
         self.grid_radius = json_obj["grid_radius"]
         self.box_width = json_obj["box_width"]
@@ -57,20 +50,19 @@ class Simulator:
         if seed is not None:
             random.seed(seed)
         # TODO: change this to use rng
-        position = np.array([0, 160], dtype=float)
-        velocity = np.array([1.25, 0], dtype=float)
-        self.agent = Spaceship(position, velocity, self.agent_colour)
+        # position = np.array([0, 160], dtype=float)
+        # velocity = np.array([1.25, 0], dtype=float)
+        self.agent = Spaceship(** self.json_obj["agent"])
 
-        # TODO: change this to use rng
-        for body in self.bodies_list:
-            if self.bodies_list[body] == 'star':
-                self.bodies[body] = Body(self.star_mass, np.array([0, 0], dtype=float), np.array([0, 0], dtype=float), 'orange')
-            if self.bodies_list[body] == 'planet':
-                self.bodies[body] = Body(self.planet_mass, np.array([0, 150], dtype=float), np.array([1.25, 0], dtype=float), 'blue')
+        # TODO: change this to use rng if NONE
+        bodies_list = self.json_obj["bodies"]
+        for body in bodies_list:
+            self.bodies.append(Body(**body))
         self.bodies.insert(0, self.agent)
         
-        # TODO: change this to use rng
-        self.objective = np.array([-100, -100], dtype=float)
+        # TODO: change this to use rng if NONE
+        # self.objective = np.array([-100, -100], dtype=float)
+        self.objective = np.array(self.json_obj["objective"])
         return None
     
 

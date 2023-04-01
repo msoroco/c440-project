@@ -4,9 +4,9 @@
         {"mass": 0.00009, "position": [0, 150], "velocity": [1.25, 0], "color": "orange"}
     ],
     "agent": {"position": [0, 160], "velocity": [1.25, 0], "color": "black"},
-    "objective": {"position": [-100, -100]},
+    "objective": [-100, -100],
     "grid_radius": 5,
-    "box_size": 20,
+    "box_width": 20,
     "frames": 4, 
     "frame_stride": 1
 }

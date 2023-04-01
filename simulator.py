@@ -87,7 +87,7 @@ class Simulator:
     
 
     def __get_reward(self):
-        return 1/ abs(self.objective - self.agent.position)
+        return 1/ np.linalg.norm(self.objective - self.agent.position)
         # return None
     
 

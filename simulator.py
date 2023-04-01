@@ -49,7 +49,7 @@ class Simulator:
         """
         if seed is not None:
             random.seed(seed)
-        # TODO: change this to use rng
+        # TODO: change this to use rng if NONE
         # position = np.array([0, 160], dtype=float)
         # velocity = np.array([1.25, 0], dtype=float)
         self.agent = Spaceship(** self.json_obj["agent"])

@@ -87,7 +87,7 @@ if __name__ == '__main__':
         state = sim.start()
         for t in MAX_STEPS:
             action = select_action(state)
-            next_state, reward = sim.step(action) # TODO: return None for final states
+            next_state, reward, terminated = sim.step(action) # TODO: return None for final states (ms: i added terminated instead)
 
             # Store the transition in memory
             memory.push(state, action, next_state, reward)
@@ -106,5 +106,7 @@ if __name__ == '__main__':
                 target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
             target_net.load_state_dict(target_net_state_dict)
 
-            if next_state is None:
+            # if next_state is None:
+            #     break
+            if terminated == True:
                 break

@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import argparse
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
@@ -62,14 +63,26 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # TODO: make this command line args
-    BATCH_SIZE = 128
-    GAMMA = 0.99
-    EPS_START = 0.9
-    EPS_END = 0.05
-    EPS_DECAY = 1000
-    TAU = 0.005
-    LR = 1e-4
-    MAX_STEPS = 10000
+    parser = argparse.ArgumentParser(description='Deep Q-Learning Hyperparameters')
+    parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
+    parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
+    parser.add_argument('--eps_start', type=float, default=0.9, help='Start value of epsilon')
+    parser.add_argument('--eps_end', type=float, default=0.05, help='End value of epsilon')
+    parser.add_argument('--eps_decay', type=int, default=1000, help='Epsilon decay rate')
+    parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
+    parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
+
+    args = parser.parse_args()
+
+    BATCH_SIZE = args.batch_size
+    GAMMA = args.gamma
+    EPS_START = args.eps_start
+    EPS_END = args.eps_end
+    EPS_DECAY = args.eps_decay
+    TAU = args.tau
+    LR = args.lr
+    MAX_STEPS = args.max_steps
 
     sim = Simulator("./sim1.json")
     state_shape, n_actions = sim.info()

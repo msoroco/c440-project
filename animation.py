@@ -32,7 +32,7 @@ class SimAnimation():
         for i in range(0, 2*self.grid_radius+1):
             for j in range(0, 2*self.grid_radius+1):
                 if state[0, i, j] == 1:
-                    self.ax.add_patch(plt.Rectangle((position[1] + j*self.box_width), position[0] + i*self.box_width,
+                    self.ax.add_patch(plt.Rectangle((position[0] + j*self.box_width, position[1] + i*self.box_width),
                                                     self.box_width, self.box_width, fill=True))
-                self.ax.add_patch(plt.Rectangle((position[1] + j*self.box_width), position[0] + i*self.box_width, 
+                self.ax.add_patch(plt.Rectangle((position[0] + j*self.box_width, position[1] + i*self.box_width),
                                                 self.box_width, self.box_width, fill=False))

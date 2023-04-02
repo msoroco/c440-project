@@ -14,7 +14,7 @@ BOX_WIDTH = 20
 GRID_RADIUS = 8
 DRAW_NEIGHBOURHOOD = True
 
-T = 10
+T = 1000
 
 
 ## demonstration of the simulator interface
@@ -25,16 +25,12 @@ if __name__ == '__main__':
     sim.start()
     states = [sim.get_current_frame()]
     
-    state, reward, terminated = sim.step(3)
-    print(sim.info())
-    states.append(sim.get_current_frame())
     for i in range(T):
         action = random.randint(0, 4)
         next_state, reward, terminated = sim.step(action)
-        print(sim.info())
+        states.append(sim.get_current_frame())
+        # print(sim.info())
         if terminated == True:
             break
 
     anim = SimAnimation(sim.bodies, states, T, True, sim.grid_radius, sim.box_width)
-    ####
-    # state_shape, n_actions = sim.info()

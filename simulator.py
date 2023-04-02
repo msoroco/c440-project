@@ -17,7 +17,7 @@ class Simulator:
         filepath : str
             Path to json file
 
-        json file attributes
+        JSON file attributes
         ---------
         * grid_radius: The width & height in coordinates of the square frame around agent.
         * box_width: The width & height of a unit coordinate in the vector space.
@@ -97,8 +97,7 @@ class Simulator:
     
 
     def __get_reward(self):
-        return 1/ np.linalg.norm(self.objective - self.agent.position)
-        # return None
+        return 1 / np.linalg.norm(0.001 + self.objective - self.agent.position)
     
 
     def __get_state(self):
@@ -109,7 +108,7 @@ class Simulator:
         for i in range(self.frames):
             if len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
-        # update info
+        # Update info
         self.past_frames.append(frame) # deque will automatically evict oldest frame if full
         self.__current_state_shape = state.shape
         return state
@@ -174,11 +173,10 @@ class Body:
 
 
 class Spaceship(Body):
-    speed = 1
-
-    def __init__(self, position, velocity, color):
+    def __init__(self, position, velocity, color, speed):
         super().__init__(0, position, velocity, color)
         self.actions = [self.thrust_up, self.thrust_down, self.thrust_left, self.thrust_right]
+        self.speed = speed
     
     # Accepts int for each of 4 possible actions
     def do_action(self, id):
@@ -187,13 +185,13 @@ class Spaceship(Body):
         # If given id greater than 4, do nothing
 
     def thrust_up(self):
-        self.position += np.array([0, Spaceship.speed], dtype=float)
+        self.position += np.array([0, self.speed], dtype=float)
     
     def thrust_down(self):
-        self.position += np.array([0, -Spaceship.speed], dtype=float)
+        self.position += np.array([0, -self.speed], dtype=float)
 
     def thrust_left(self):
-        self.position += np.array([-Spaceship.speed, 0], dtype=float)
+        self.position += np.array([-self.speed, 0], dtype=float)
 
     def thrust_right(self):
-        self.position += np.array([Spaceship.speed, 0], dtype=float)
+        self.position += np.array([self.speed, 0], dtype=float)

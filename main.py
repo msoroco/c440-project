@@ -28,7 +28,12 @@ def select_action(state, time_step):
 
 def train():
     # Sample batch for all Transition elements (and a mask for final states)
-    state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = memory.sample(BATCH_SIZE).to(device)
+    state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = memory.sample(BATCH_SIZE)
+    state_batch = state_batch.to(device)
+    action_batch = action_batch.to(device)
+    next_state_batch = next_state_batch.to(device)
+    reward_batch = reward_batch.to(device)
+    final_state_mask = final_state_mask.to(device)
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken. These are the actions which would've been taken
@@ -94,7 +99,6 @@ if __name__ == '__main__':
     sim = Simulator("./sim1.json")
     sim.start()
     state_shape, n_actions = sim.info()
-    print(state_shape)
 
     policy_net = DQN(state_shape, n_actions).to(device)
     target_net = DQN(state_shape, n_actions).to(device)

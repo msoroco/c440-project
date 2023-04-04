@@ -27,10 +27,10 @@ class ReplayMemory(object):
         state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = zip(*batch)
         # Convert to tensors
         final_state_mask = torch.tensor(final_state_mask, dtype=bool)
-        state_batch = torch.tensor(np.array(state_batch), dtype=float)
+        state_batch = torch.tensor(np.array(state_batch), dtype=torch.float)
         action_batch = torch.tensor(action_batch, dtype=int).unsqueeze(1)
-        next_state_batch = torch.tensor(next_state_batch, dtype=float)[~final_state_mask]
-        reward_batch = torch.tensor(reward_batch, dtype=float).unsqueeze(1)
+        next_state_batch = torch.tensor(next_state_batch, dtype=torch.float)[~final_state_mask]
+        reward_batch = torch.tensor(reward_batch, dtype=torch.float).unsqueeze(1)
         return  state_batch, action_batch, next_state_batch, reward_batch, final_state_mask
 
     def __len__(self):

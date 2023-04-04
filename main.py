@@ -17,6 +17,7 @@ GRID_RADIUS = 8
 
 def select_action(state, time_step):
     sample = random.random()
+    # exponential exploration/exploitation tradeoff
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
     if sample > eps_threshold:
         with torch.no_grad():
@@ -26,19 +27,32 @@ def select_action(state, time_step):
     
 
 def train():
+    # Sample batch for all Transition elements (and a mask for final states)
     state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = memory.sample(BATCH_SIZE).to(device)
 
+    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
+    # columns of actions taken. These are the actions which would've been taken
+    # for each batch state according to policy_net
     state_action_values = policy_net(state_batch).gather(1, action_batch)
 
+    # Compute V(s_{t+1}) for all next states.
+    # Expected values of actions for next_state_batch are computed based
+    # on the "older" target_net; selecting their best reward with max(1)[0].
+    # This is merged based on the mask, such that we'll have either the expected
+    # state value or 0 in case the state was final.
     next_state_values = torch.zeros(BATCH_SIZE, device=device)
     with torch.no_grad():
         next_state_values[~final_state_mask] = target_net(next_state_batch).max(1)[0]
+    # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
+    # Compute Huber loss
     loss = loss_fn(state_action_values, expected_state_action_values.unsqueeze(1))
 
+    # Optimize the model
     optimizer.zero_grad()
     loss.backward()
+    # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
 
@@ -78,6 +92,7 @@ if __name__ == '__main__':
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
 
     sim = Simulator("./sim1.json")
+    sim.start()
     state_shape, n_actions = sim.info()
 
     policy_net = DQN(state_shape, n_actions).to(device)
@@ -105,6 +120,7 @@ if __name__ == '__main__':
             train()
 
             # Soft update of the target network's weights
+            # θ′ ← τ θ + (1 −τ )θ′
             target_net_state_dict = target_net.state_dict()
             policy_net_state_dict = policy_net.state_dict()
             for key in policy_net_state_dict:

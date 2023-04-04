@@ -73,7 +73,7 @@ class Simulator:
         # TODO: change this to use rng if NONE
         # self.objective = np.array([-100, -100], dtype=float)
         self.objective = np.array(self._json_obj["objective"])
-        return None
+        return self.__get_state()
     
 
     def step(self, action : int):

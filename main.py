@@ -94,6 +94,7 @@ if __name__ == '__main__':
     sim = Simulator("./sim1.json")
     sim.start()
     state_shape, n_actions = sim.info()
+    
 
     policy_net = DQN(state_shape, n_actions).to(device)
     target_net = DQN(state_shape, n_actions).to(device)
@@ -129,6 +130,7 @@ if __name__ == '__main__':
 
             if terminated:
                 break
+
     save_model(policy_net, "policy_net.pth")
     save_model(target_net, "target_net.pth")
 

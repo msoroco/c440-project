@@ -19,14 +19,16 @@ class Simulator:
 
         JSON file attributes
         ---------
-        * grid_radius: The width & height in coordinates of the square frame around agent.
-        * box_width: The width & height of a unit coordinate in the vector space.
-        * frames: The number of past frames agent will maintain in addition to its observed frame.
-        * frame_stride: The number of time steps between the frames the agent maintains.
-        * tolerance: The distance (in coordinates) to objective within which agent must achieve.
-        * agent:
-        * objective: length 2 array of coordinate of the objective
-        * bodies:
+        * `grid_radius`: The width & height in coordinates of the square frame around agent.
+        * `box_width`: The width & height of a unit coordinate in the vector space.
+        * `frames`: The number of past frames agent will maintain in addition to its observed frame.
+        * `frame_stride`: The number of time steps between the frames the agent maintains.
+        * `tolerance`: The distance (in coordinates) to objective within which agent must achieve.
+        * `agent`:
+        * `objective`: length 2 array of coordinate of the objective
+        * `bodies`:
+        * `start_zeros`: Have the simulation pad the missing frames with all zeros for first |`frames`| frames (default is do nothing)
+        * `start_copies`: Have the simulation pad the missing frames with itself for first |`frames`| frames (`start_zeros` will default if both `True`)
         """
         json_obj = Simulator.__load_json(filepath)
         self._json_obj = json_obj
@@ -40,6 +42,8 @@ class Simulator:
         self.frames = json_obj["frames"]
         self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
         self.tolerance = self.box_width
+        self.start_zeros = True
+        self.start_copies = False
 
 
     def info(self):
@@ -74,7 +78,7 @@ class Simulator:
         # self.objective = np.array([-100, -100], dtype=float)
         self.objective = np.array(self._json_obj["objective"])
 
-        # Reset past frame
+        # empty past frame queue
         self.past_frames = deque([], maxlen=self.frames*self.frame_stride)
         return self.__get_state()
     
@@ -111,8 +115,10 @@ class Simulator:
         for i in range(self.frames):
             if len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
-            else: # TODO: If you can't attach a past frame, attach a dummy frame
+            elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
                 state = np.concatenate((state, np.zeros(frame.shape)))
+            elif self.start_copies: # If you can't attach a past frame, attach a copy of itself
+                state = np.concatenate((state, frame))
         # Update info
         self.past_frames.append(frame) # deque will automatically evict oldest frame if full
         self.__current_state_shape = state.shape

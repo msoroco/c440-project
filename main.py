@@ -87,10 +87,10 @@ if __name__ == '__main__':
         state = sim.start()
         for t in MAX_STEPS:
             action = select_action(state)
-            next_state, reward, terminated = sim.step(action) # TODO: return None for final states (ms: i added terminated instead)
+            next_state, reward, terminated = sim.step(action)
 
             # Store the transition in memory
-            memory.push(state, action, next_state, reward)
+            memory.push(state, action, next_state, reward, terminated)
 
             # Move to the next state
             state = next_state

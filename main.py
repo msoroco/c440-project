@@ -94,7 +94,7 @@ if __name__ == '__main__':
     sim = Simulator("./sim1.json")
     sim.start()
     state_shape, n_actions = sim.info()
-    
+    print(state_shape)
 
     policy_net = DQN(state_shape, n_actions).to(device)
     target_net = DQN(state_shape, n_actions).to(device)

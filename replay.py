@@ -20,6 +20,8 @@ class ReplayMemory(object):
         Returns a tensor for each of the Transition elements state, action, next_state, and reward
         and a mask tensor of final states
         """
+        # In case batch_size > memory size
+        batch_size = min(batch_size, len(self.memory))
         batch = random.sample(self.memory, batch_size)
         # Convert list of tuples to list of tuple elements
         state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = zip(*batch)

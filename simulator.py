@@ -48,7 +48,7 @@ class Simulator:
         """
         n_actions = len(self.agent.actions) + 1
 
-        return n_actions, self.__current_state_shape
+        return self.__current_state_shape, n_actions
     
 
     def start(self, seed=None):
@@ -73,6 +73,9 @@ class Simulator:
         # TODO: change this to use rng if NONE
         # self.objective = np.array([-100, -100], dtype=float)
         self.objective = np.array(self._json_obj["objective"])
+
+        # Reset past frame
+        self.past_frames = deque([], maxlen=self.frames*self.frame_stride)
         return self.__get_state()
     
 
@@ -108,6 +111,8 @@ class Simulator:
         for i in range(self.frames):
             if len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
+            else: # TODO: If you can't attach a past frame, attach a dummy frame
+                state = np.concatenate((state, np.zeros(frame.shape)))
         # Update info
         self.past_frames.append(frame) # deque will automatically evict oldest frame if full
         self.__current_state_shape = state.shape

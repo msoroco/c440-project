@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import random
 import argparse
@@ -10,9 +11,6 @@ from itertools import count
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-BOX_WIDTH = 20
-GRID_RADIUS = 8
 
 
 def select_action(state, time_step):
@@ -82,7 +80,8 @@ if __name__ == '__main__':
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
-    parser.add_argument('--draw_neighbourhood', type=bool, default=False, help='Draw neighbourhood')
+    parser.add_argument('--draw_neighbourhood', type=bool, action="store_true", help='Draw neighbourhood')
+    parser.add_argument('--test', type=bool, action="store_true", help='Test out agent')
 
     args = parser.parse_args()
 
@@ -95,6 +94,7 @@ if __name__ == '__main__':
     LR = args.lr
     MAX_STEPS = args.max_steps
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
+    TEST = args.test
 
     sim = Simulator("./sim1.json")
     sim.start()
@@ -104,9 +104,14 @@ if __name__ == '__main__':
 
     policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
+
+    if os.path.isfile("policy_net.pth"):
+        load_model(policy_net, "policy_net.pth")
+
     target_net.load_state_dict(policy_net.state_dict())
 
     print("Initialized model")
+    
 
     loss_fn = nn.SmoothL1Loss()
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
@@ -115,6 +120,9 @@ if __name__ == '__main__':
     for i_episode in range(1):
         # Initialize simulation
         state = sim.start()
+        # Initialize animation
+        if TEST:
+            anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
             action = select_action(state, t)
@@ -126,25 +134,28 @@ if __name__ == '__main__':
             # Move to the next state
             state = next_state
 
-            # Perform one step of the optimization (on the policy network)
-            train()
+            if TEST:
+                # Animate
+                anim_frames.append(sim.get_current_frame())
+            else:
+                # Perform one step of the optimization (on the policy network)
+                train()
 
-            # Soft update of the target network's weights
-            # θ′ ← τ θ + (1 −τ )θ′
-            target_net_state_dict = target_net.state_dict()
-            policy_net_state_dict = policy_net.state_dict()
-            for key in policy_net_state_dict:
-                target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-            target_net.load_state_dict(target_net_state_dict)
+                # Soft update of the target network's weights
+                # θ′ ← τ θ + (1 −τ )θ′
+                target_net_state_dict = target_net.state_dict()
+                policy_net_state_dict = policy_net.state_dict()
+                for key in policy_net_state_dict:
+                    target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+                target_net.load_state_dict(target_net_state_dict)
+
+            if (t + 1) % 100 == 0:
+                print("Step:", t+1)
 
             if terminated:
                 break
 
-    save_model(policy_net, "policy_net.pth")
-    save_model(target_net, "target_net.pth")
+    anim = SimAnimation(sim.bodies, anim_frames, MAX_STEPS, True, sim.grid_radius, sim.box_width)
 
-    policy_net = DQN(state_shape, n_actions).to(device)
-    load_model(policy_net, "policy_net.pth")
-
-    target_net = DQN(state_shape, n_actions).to(device)
-    load_model(target_net, "target_net.pth")
+    if not TEST:
+        save_model(policy_net, "policy_net.pth")

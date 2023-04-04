@@ -4,7 +4,7 @@ import numpy as np
 from collections import namedtuple, deque
 
 Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
+                        ('state', 'action', 'next_state', 'reward', 'terminated'))
 
 class ReplayMemory(object):
 
@@ -22,12 +22,12 @@ class ReplayMemory(object):
         """
         batch = random.sample(self.memory, batch_size)
         # Convert list of tuples to list of tuple elements
-        state_batch, action_batch, next_state_batch, reward_batch = zip(*batch)
+        state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = zip(*batch)
         # Convert to tensors
-        final_state_mask = torch.tensor(list(map(lambda s: s is None, next_state_batch)), dtype=bool)
+        final_state_mask = torch.tensor(final_state_mask, dtype=bool)
         state_batch = torch.tensor(np.array(state_batch), dtype=float)
         action_batch = torch.tensor(action_batch, dtype=int).unsqueeze(1)
-        next_state_batch = torch.tensor(list(filter(lambda s: s is not None, next_state_batch)), dtype=float)
+        next_state_batch = torch.tensor(next_state_batch, dtype=float)[~final_state_mask]
         reward_batch = torch.tensor(reward_batch, dtype=float).unsqueeze(1)
         return  state_batch, action_batch, next_state_batch, reward_batch, final_state_mask
 

@@ -96,7 +96,7 @@ if __name__ == '__main__':
             next_state, reward, terminated = sim.step(action)
 
             # Store the transition in memory
-            memory.push(state, action, next_state, reward)
+            memory.push(state, action, next_state, reward, terminated)
 
             # Move to the next state
             state = next_state

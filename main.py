@@ -28,7 +28,7 @@ def select_action(state, time_step):
 
 def train():
     # Sample batch for all Transition elements (and a mask for final states)
-    state_batch, action_batch, next_state_batch, reward_batch, final_state_mask = memory.sample(BATCH_SIZE)
+    state_batch, action_batch, next_state_batch, reward_batch, final_state_mask, batch_size = memory.sample(BATCH_SIZE)
     state_batch = state_batch.to(device)
     action_batch = action_batch.to(device)
     next_state_batch = next_state_batch.to(device)
@@ -45,7 +45,7 @@ def train():
     # on the "older" target_net; selecting their best reward with max(1)[0].
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
-    next_state_values = torch.zeros(BATCH_SIZE, device=device)
+    next_state_values = torch.zeros(batch_size, device=device)
     with torch.no_grad():
         next_state_values[~final_state_mask] = target_net(next_state_batch).max(1)[0]
     # Compute the expected Q values

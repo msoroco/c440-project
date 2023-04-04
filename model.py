@@ -49,7 +49,6 @@ class DQN(nn.Module):
 
     def forward(self, x):
         x = self.convs(x)
-        print(x.shape)
         x = torch.flatten(x, 1)
         x = self.lins(x)
         return x

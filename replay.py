@@ -15,6 +15,7 @@ class ReplayMemory(object):
         """Save a transition"""
         self.memory.append(Transition(*args))
 
+    # TODO: Give this guy device
     def sample(self, batch_size):
         """
         Returns a tensor for each of the Transition elements state, action, next_state, and reward
@@ -31,7 +32,7 @@ class ReplayMemory(object):
         action_batch = torch.tensor(action_batch, dtype=int).unsqueeze(1)
         next_state_batch = torch.tensor(next_state_batch, dtype=torch.float)[~final_state_mask]
         reward_batch = torch.tensor(reward_batch, dtype=torch.float).unsqueeze(1)
-        return  state_batch, action_batch, next_state_batch, reward_batch, final_state_mask
+        return  state_batch, action_batch, next_state_batch, reward_batch, final_state_mask, batch_size
 
     def __len__(self):
         return len(self.memory)

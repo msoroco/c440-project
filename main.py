@@ -100,9 +100,13 @@ if __name__ == '__main__':
     sim.start()
     state_shape, n_actions = sim.info()
 
-    policy_net = DQN(state_shape, n_actions).to(device)
-    target_net = DQN(state_shape, n_actions).to(device)
+    print("Initialized simulator")
+
+    policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
+    target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
     target_net.load_state_dict(policy_net.state_dict())
+
+    print("Initialized model")
 
     loss_fn = nn.SmoothL1Loss()
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
@@ -111,6 +115,7 @@ if __name__ == '__main__':
     for i_episode in range(1):
         # Initialize simulation
         state = sim.start()
+        print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
             action = select_action(state, t)
             next_state, reward, terminated = sim.step(action)

@@ -42,17 +42,17 @@ def train():
 
     # Compute V(s_{t+1}) for all next states.
     # Expected values of actions for next_state_batch are computed based
-    # on the "older" target_net; selecting their best reward with max(1)[0].
+    # on the "older" target_net; selecting their best reward.
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
     next_state_values = torch.zeros(batch_size, device=device)
     with torch.no_grad():
         next_state_values[~final_state_mask] = target_net(next_state_batch).max(1)[0]
     # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
+    expected_state_action_values = (next_state_values.unsqueeze(1) * GAMMA) + reward_batch
 
     # Compute Huber loss
-    loss = loss_fn(state_action_values, expected_state_action_values.unsqueeze(1))
+    loss = loss_fn(state_action_values, expected_state_action_values)
 
     # Optimize the model
     optimizer.zero_grad()

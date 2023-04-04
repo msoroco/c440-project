@@ -21,7 +21,7 @@ def select_action(state, time_step):
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
     if sample > eps_threshold:
         with torch.no_grad():
-            return policy_net(state).argmax(1)
+            return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0)).argmax(1)
     else:
         return random.randint(0, n_actions-1)
     
@@ -29,7 +29,7 @@ def select_action(state, time_step):
 def train():
     # Sample batch for all Transition elements (and a mask for final states)
     state_batch, action_batch, next_state_batch, reward_batch, final_state_mask, batch_size = memory.sample(BATCH_SIZE)
-    state_batch = state_batch.to(device)
+    state_batch = state_batch.to()
     action_batch = action_batch.to(device)
     next_state_batch = next_state_batch.to(device)
     reward_batch = reward_batch.to(device)

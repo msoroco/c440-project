@@ -80,8 +80,8 @@ if __name__ == '__main__':
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
-    parser.add_argument('--draw_neighbourhood', type=bool, action="store_true", help='Draw neighbourhood')
-    parser.add_argument('--test', type=bool, action="store_true", help='Test out agent')
+    parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
+    parser.add_argument('--test', action="store_true", help='Test out agent')
 
     args = parser.parse_args()
 

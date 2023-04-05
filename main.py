@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 break
 
     if TEST:
-        anim = SimAnimation(sim.bodies, anim_frames, MAX_STEPS)
+        SimAnimation(sim.bodies, anim_frames, MAX_STEPS, DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
     if not TEST:
         save_model(policy_net, "policy_net.pth")

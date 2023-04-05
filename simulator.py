@@ -19,12 +19,13 @@ class Simulator:
 
         JSON file attributes
         ---------
-        * `limits`: width/height of the whole square environment
+        * `limits`: width/height of the whole square environment. Defaults to 300.
         * `grid_radius`: The width & height in coordinates of the square frame around agent.
         * `box_width`: The width & height of a unit coordinate in the vector space.
         * `frames`: The number of past frames agent will maintain in addition to its observed frame.
         * `frame_stride`: The number of time steps between the frames the agent maintains.
         * `tolerance`: The distance (in coordinates) to objective within which agent must achieve.
+          Also the distance within which agent is considered to have collided with another body.
         * `agent`:
         * `objective`: length 2 array of coordinate of the objective
         * `bodies`:

@@ -19,11 +19,13 @@ class Simulator:
 
         JSON file attributes
         ---------
+        * `limits`: width/height of the whole square environment. Defaults to 300.
         * `grid_radius`: The width & height in coordinates of the square frame around agent.
         * `box_width`: The width & height of a unit coordinate in the vector space.
         * `frames`: The number of past frames agent will maintain in addition to its observed frame.
         * `frame_stride`: The number of time steps between the frames the agent maintains.
         * `tolerance`: The distance (in coordinates) to objective within which agent must achieve.
+          Also the distance within which agent is considered to have collided with another body.
         * `agent`:
         * `objective`: length 2 array of coordinate of the objective
         * `bodies`:
@@ -33,6 +35,9 @@ class Simulator:
         json_obj = Simulator.__load_json(filepath)
         self._json_obj = json_obj
         # State information
+        self.limits = json_obj["limits"]
+        if self.limits is None:
+            self.limits = 300
         self.grid_radius = json_obj["grid_radius"]
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
@@ -41,7 +46,10 @@ class Simulator:
         self.start_zeros = True
         self.start_copies = False
 
-
+    def get_bodies_and_objective(self):
+        return self.bodies, self.objective
+    
+    
     def info(self):
         """
         Returns the number of actions (including do nothing) and the shape of states
@@ -95,9 +103,19 @@ class Simulator:
 
         state = self.__get_state()
         reward = self.__get_reward()
-        terminated = (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
+        terminated = self.__get_terminated()
         return state, reward, terminated
     
+    def __get_terminated(self):
+        reached_objective =  (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
+        outside_frame =  abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits
+        hit_body = False
+        for body in self.bodies:
+            if body != self.agent:
+                if (np.linalg.norm(body.position - self.agent.position) < self.tolerance):
+                    hit_body = True
+        return reached_objective or outside_frame or hit_body
+
 
     def __get_reward(self):
         return 1 / np.linalg.norm(0.001 + self.objective - self.agent.position)

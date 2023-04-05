@@ -7,5 +7,6 @@
     "grid_radius": 10,
     "box_width": 20,
     "frames": 4, 
-    "frame_stride": 1
+    "frame_stride": 1,
+    "limits": 300
 }

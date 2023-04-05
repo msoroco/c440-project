@@ -28,22 +28,24 @@ class DQN(nn.Module):
 
         # conv layer setup
         channels = np.linspace(state_shape[0], n_out_channels, num=n_convs+1).astype(int)
-        self.convs = nn.ModuleList()
+        conv_layers = []
         for i in range(n_convs):
-            self.convs.append(nn.Conv2d(channels[i], channels[i+1], kernel_size))
-            if i < n_convs-1: 
-                self.convs.append(nn.MaxPool2d(pool_size))
-                state_shape[1:] = state_shape[1:] - (pool_size - 1)
+            conv_layers.append(nn.Conv2d(channels[i], channels[i+1], kernel_size))
             state_shape[1:] = state_shape[1:] - (kernel_size - 1)
-        state_shape[0] = channels[n_convs]
+            if i < n_convs-1: 
+                conv_layers.append(nn.MaxPool2d(pool_size))
+                state_shape[1:] = np.floor((state_shape[1:] - pool_size) / pool_size + 1)
+            state_shape[0] = channels[i+1]
+        self.convs = nn.Sequential(*conv_layers)
 
         # lin layer setup
         lin_sizes = np.linspace(np.prod(state_shape), n_actions, num=n_lins+1).astype(int)
-        self.lins = nn.ModuleList()
+        lin_layers = []
         for i in range(n_lins):
-            self.lins.append(nn.Linear(lin_sizes[i], lin_sizes[i+1]))
+            lin_layers.append(nn.Linear(lin_sizes[i], lin_sizes[i+1]))
             if i < n_lins-1: 
-                self.lins.append(nn.ReLU())
+                lin_layers.append(nn.ReLU())
+        self.lins = nn.Sequential(*lin_layers)
 
     def forward(self, x):
         x = self.convs(x)

@@ -39,8 +39,7 @@ class SimAnimation():
                     self.ax.add_patch(plt.Rectangle((position[0] + j*self.box_width, position[1] + i*self.box_width),
                                                     self.box_width, self.box_width, fill=True))
                 elif state[1, i, j] == 1:
-                    fill_sq = False # TODO: (np.linalg.norm(self.objective - old_position, ord=1) <= 2*self.grid_radius+1)
                     self.ax.add_patch(plt.Rectangle((position[0] + j*self.box_width, position[1] + i*self.box_width),
-                                                    self.box_width, self.box_width, fill=fill_sq, color="r", linewidth=2))
+                                                    self.box_width, self.box_width, fill=False, color="r", linewidth=2))
                 else: self.ax.add_patch(plt.Rectangle((position[0] + j*self.box_width, position[1] + i*self.box_width),
                                                 self.box_width, self.box_width, fill=False))

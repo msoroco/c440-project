@@ -4,14 +4,15 @@ from matplotlib import animation
 from simulator import Spaceship
 
 class SimAnimation():
-    def __init__(self, bodies, states, iterations, draw_neighbourhood=False, grid_radius=None, box_width=None):
+    def __init__(self, bodies, objective, frame, iterations, draw_neighbourhood=False, grid_radius=None, box_width=None):
         self.draw_neighbourhood = draw_neighbourhood
         if self.draw_neighbourhood and (grid_radius==None or box_width==None):
             raise Exception("If draw_neighbourhood is set to True, grid_radius and box_width must be specified") 
         self.grid_radius = grid_radius
         self.box_width = box_width
         self.bodies = bodies
-        self.states = states
+        self.objective = objective
+        self.states = frame
         fig, self.ax = plt.subplots(1, 1, figsize = (6, 6))
         anim = animation.FuncAnimation(fig, self.animate, frames = iterations+1, interval = 1)
         plt.show()
@@ -19,6 +20,7 @@ class SimAnimation():
     def animate(self, end):
         start = max(0, end-100)
         self.ax.cla()
+        self.ax.scatter(self.objective[0], self.objective[1], marker='*', s=150)
         for body in self.bodies:
             self.ax.plot(body.history[start:end+1, 0], body.history[start:end+1, 1], ".", color=body.color)
             if isinstance(body, Spaceship) and self.draw_neighbourhood:

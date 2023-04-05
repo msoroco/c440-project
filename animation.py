@@ -26,7 +26,7 @@ class SimAnimation():
             self.ax.plot(body.history[start:end+1, 0], body.history[start:end+1, 1], ".", color=body.color)
             if isinstance(body, Spaceship) and self.draw_neighbourhood:
                 self.draw_state(self.states[end], body.history[end])
-        self.ax.set_xlim(-self.limits, self.limits) # 300
+        self.ax.set_xlim(-self.limits, self.limits)
         self.ax.set_ylim(-self.limits, self.limits)
 
 

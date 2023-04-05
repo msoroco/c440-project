@@ -32,15 +32,11 @@ class Simulator:
         """
         json_obj = Simulator.__load_json(filepath)
         self._json_obj = json_obj
-        self.agent = None
-        self.bodies = []
-        self.objective = None
         # State information
         self.grid_radius = json_obj["grid_radius"]
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
         self.frames = json_obj["frames"]
-        self.past_frames = deque([], maxlen=self.frames*self.frame_stride) # To avoid recomputation
         self.tolerance = self.box_width
         self.start_zeros = True
         self.start_copies = False
@@ -61,12 +57,13 @@ class Simulator:
 
         Returns state
         """
+
         if seed is not None:
             random.seed(seed)
         # TODO: change this to use rng if NONE
-        # position = np.array([0, 160], dtype=float)
-        # velocity = np.array([1.25, 0], dtype=float)
+
         self.agent = Spaceship(** self._json_obj["agent"])
+        self.bodies = []
 
         # TODO: change this to use rng if NONE
         bodies_list = self._json_obj["bodies"]
@@ -75,10 +72,9 @@ class Simulator:
         self.bodies.insert(0, self.agent)
         
         # TODO: change this to use rng if NONE
-        # self.objective = np.array([-100, -100], dtype=float)
         self.objective = np.array(self._json_obj["objective"])
 
-        # empty past frame queue
+        # Empty past frame queue
         self.past_frames = deque([], maxlen=self.frames*self.frame_stride)
         return self.__get_state()
     

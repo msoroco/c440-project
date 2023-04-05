@@ -17,7 +17,7 @@ def select_action(state, time_step):
     sample = random.random()
     # exponential exploration/exploitation tradeoff
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
-    if sample > eps_threshold:
+    if TEST or sample > eps_threshold:
         with torch.no_grad():
             return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0)).argmax(1)
     else:
@@ -156,7 +156,7 @@ if __name__ == '__main__':
                 break
 
     if TEST:
-        anim = SimAnimation(sim.bodies, anim_frames, MAX_STEPS, True, sim.grid_radius, sim.box_width)
+        anim = SimAnimation(sim.bodies, anim_frames, MAX_STEPS)
 
     if not TEST:
         save_model(policy_net, "policy_net.pth")

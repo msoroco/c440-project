@@ -4,6 +4,7 @@
     ],
     "agent": {"position": [0, 160], "velocity": [0, 0], "color": "black", "speed": 5},
     "objective": [-100, -100],
+    "penalty": -10,
     "grid_radius": 10,
     "box_width": 20,
     "frames": 4, 

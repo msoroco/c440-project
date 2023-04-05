@@ -82,6 +82,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
+    parser.add_argument('--animate', action="store_true", help='Animate (whether testing or not)')
 
     args = parser.parse_args()
 
@@ -95,6 +96,7 @@ if __name__ == '__main__':
     MAX_STEPS = args.max_steps
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
     TEST = args.test
+    ANIMATE = args.animate
 
     sim = Simulator("./sim1.json")
     sim.start()
@@ -121,7 +123,7 @@ if __name__ == '__main__':
         # Initialize simulation
         state = sim.start()
         # Initialize animation
-        if TEST:
+        if TEST or ANIMATE:
             anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
@@ -134,10 +136,10 @@ if __name__ == '__main__':
             # Move to the next state
             state = next_state
 
-            if TEST:
+            if TEST or ANIMATE:
                 # Animate
                 anim_frames.append(sim.get_current_frame())
-            else:
+            if not TEST:
                 # Perform one step of the optimization (on the policy network)
                 train()
 
@@ -155,7 +157,7 @@ if __name__ == '__main__':
             if terminated:
                 break
 
-    if TEST:
+    if TEST or ANIMATE:
         SimAnimation(sim.bodies, anim_frames, MAX_STEPS, DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
     if not TEST:

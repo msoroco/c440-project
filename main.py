@@ -79,7 +79,9 @@ if __name__ == '__main__':
     parser.add_argument('--eps_decay', type=int, default=1000, help='Epsilon decay rate')
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
+    parser.add_argument('--episodes', type=int, default=100, help='Num episodes')
     parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
+    parser.add_argument('--simulation', type=str, default="./sim1.json", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
     parser.add_argument('--animate', action="store_true", help='Animate (whether testing or not)')
@@ -93,9 +95,12 @@ if __name__ == '__main__':
     EPS_DECAY = args.eps_decay
     TAU = args.tau
     LR = args.lr
+    EPISODES = args.episodes
     MAX_STEPS = args.max_steps
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
     TEST = args.test
+    if TEST: # There is no need to do multiple episodes when testing
+        EPISODES = 1
     ANIMATE = args.animate
 
     sim = Simulator("./sim1.json")
@@ -119,7 +124,7 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
     memory = ReplayMemory(10000)
 
-    for i_episode in range(1):
+    for i_episode in range(EPISODES):
         # Initialize simulation
         state = sim.start()
         # Initialize animation
@@ -151,10 +156,11 @@ if __name__ == '__main__':
                     target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
                 target_net.load_state_dict(target_net_state_dict)
 
-            if (t + 1) % 100 == 0:
+            if (t + 1) % 1000 == 0:
                 print("Step:", t+1)
 
             if terminated:
+                print("Finished at:", t+1)
                 break
 
     if TEST or ANIMATE:

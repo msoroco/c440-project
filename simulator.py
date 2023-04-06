@@ -35,16 +35,26 @@ class Simulator:
         json_obj = Simulator.__load_json(filepath)
         self._json_obj = json_obj
         # State information
-        self.limits = json_obj["limits"]
-        if self.limits is None:
-            self.limits = 300
-        self.grid_radius = json_obj["grid_radius"]
-        self.box_width = json_obj["box_width"]
-        self.frame_stride = json_obj["frame_stride"]
-        self.frames = json_obj["frames"]
-        self.tolerance = self.box_width
-        self.start_zeros = True
-        self.start_copies = False
+        try: self.limits = json_obj["limits"]
+        except: self.limits = 300
+        try: self.grid_radius = json_obj["grid_radius"]
+        except: self.grid_radius = 10
+        try: self.box_width = json_obj["box_width"]
+        except: self.box_width = 20
+        try: self.frame_stride = json_obj["frame_stride"]
+        except: self.frame_stride = 1
+        try: self.frames = json_obj["frames"]
+        except: self.frames = 4
+        try: self.penalty = self._json_obj["penalty"]
+        except: self.penalty = -10
+        try: self.tolerance = self._json_obj["box_width"]
+        except: self.tolerance = self.box_width
+        try: self.start_zeros = self._json_obj["start_zeros"]
+        except: self.start_zeros = True
+        try: self.start_copies = self._json_obj["self.start_copies"]
+        except: self.start_copies = False
+        try: self.verbose = self._json_obj["verbose"]
+        except: self.verbose = False
 
     def get_bodies_and_objective(self):
         return self.bodies, self.objective
@@ -102,23 +112,58 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        reward = self.__get_reward()
-        terminated = self.__get_terminated()
+        terminated, penalty = self.__get_terminated()
+        reward = self.__get_reward(penalty)
         return state, reward, terminated
     
     def __get_terminated(self):
-        reached_objective =  (np.linalg.norm(self.objective - self.agent.position) < self.tolerance)
-        outside_frame =  abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits
-        hit_body = False
-        for body in self.bodies:
-            if body != self.agent:
-                if (np.linalg.norm(body.position - self.agent.position) < self.tolerance):
-                    hit_body = True
-        return reached_objective or outside_frame or hit_body
+        """
+        Checkes whether the simulation should terminate if the spaceship has reached the objective,
+        crashed into (or went through) a planet, or went outside the simulation zone.
+
+        Returns a tuple (terminated, penalty) of True if terminated or False otherwise and True if it is a penalty termination
+        or False otherwise
+        """
+        terminated = False
+        penalty = False
+        # Objective reached
+        if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
+            terminated = True
+            penalty = False
+            if self.verbose: print("Termination: Objective reached!")
+        # Out of bounds
+        elif abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
+            terminated = True
+            penalty = True
+            if self.verbose: print("Termination: out of bounds")
+        # Check crash or Agent going through a body:
+        else:
+            for body in self.bodies:
+                if body != self.agent:
+                    # Crash
+                    if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
+                        terminated = True
+                        penalty = True
+                        if self.verbose: print("Termination: agent collided with a body")
+                    # Agent went through a body:
+                    curr_pos = self.agent.position
+                    prev_pos = self.agent.history[-2]
+                    agent_line = (curr_pos - prev_pos)
+                    body_pos = (body.position - prev_pos)
+                    projection_body = np.dot(agent_line, body_pos)/np.dot(agent_line, agent_line) * agent_line
+                    # check that distance between orthogonal projection of body into agents path and body is less than tolerance
+                    if np.linalg.norm(body.position - (projection_body + prev_pos)) < self.tolerance:
+                        # check that body lies between the two positions of agent
+                        if max(curr_pos[0], prev_pos[0]) >= (projection_body + prev_pos)[0] and min(curr_pos[0], prev_pos[0]) <= (projection_body + prev_pos)[0]:
+                            if max(curr_pos[1], prev_pos[1]) >= (projection_body + prev_pos)[1] and min(curr_pos[1], prev_pos[1]) <= (projection_body + prev_pos)[1]:
+                                if self.verbose: print("Termination: agent went through a body")
+                                terminated = True
+                                penalty = True
+        return terminated, penalty
 
 
-    def __get_reward(self):
-        return 1 / np.linalg.norm(0.001 + self.objective - self.agent.position)
+    def __get_reward(self, termination_reason):
+        return termination_reason * self.penalty + 1 / np.linalg.norm(0.001 + self.objective - self.agent.position)
     
 
     def __get_state(self):

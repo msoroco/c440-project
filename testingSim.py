@@ -33,4 +33,4 @@ if __name__ == '__main__':
         if terminated == True:
             break
 
-    anim = SimAnimation(sim.bodies, states, T, True, sim.grid_radius, sim.box_width)
+    anim = SimAnimation(sim.bodies, sim.objective, sim.limits, states, len(states), DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)

@@ -1,2 +1,7 @@
 __pycache__/
 .vscode
+sim1/
+sim2/
+sim3.json
+testingTermination.py
+policy_net.pth

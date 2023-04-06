@@ -110,31 +110,46 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        penalty, terminated = self.__get_terminated()
+        terminated, penalty = self.__get_terminated()
         reward = self.__get_reward(penalty)
         return state, reward, terminated
     
     def __get_terminated(self):
         """
         Checkes whether the simulation should terminate if the spaceship has reached the objective,
-        crashed into a planet, or went outside the simulation zone
+        crashed into (or went through) a planet, or went outside the simulation zone.
 
-        Returns a tuple of True if terminated or False otherwise and True if it is a penalty termination
+        Returns a tuple (terminated, penalty) of True if terminated or False otherwise and True if it is a penalty termination
         or False otherwise
         """
+        terminated = False
+        penalty = False
         # Objective reached
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
-            return True, False
+            terminated = True
+            penalty = False
         # Out of bounds
-        if abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
-            return True, True
-        hit_body = False
-        for body in self.bodies:
-            if body != self.agent:
-                # Crash
-                if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
-                    return True, True
-        return False, False
+        elif abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
+            terminated = True
+            penalty = True
+        # Check crash or Agent going through a body:
+        else:
+            for body in self.bodies:
+                if body != self.agent:
+                    # Crash
+                    if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
+                        terminated = True
+                        penalty = True
+                    # Agent went through a body:
+                    curr_pos = self.agent.position
+                    prev_pos = self.agent.history[-2]
+                    if (body.position[0] - curr_pos[0])(prev_pos[1] - curr_pos[1]) == (body.position[1] - curr_pos[1])(prev_pos[0] - curr_pos[0]):
+                        if max(curr_pos[0], prev_pos[0]) >= body.position[0] and min(curr_pos[0], prev_pos[0]) <= body.position[0]:
+                            terminated = True
+                            penalty = True
+                    
+
+        return terminated, penalty
 
 
     def __get_reward(self, termination_reason):

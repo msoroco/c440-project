@@ -53,6 +53,8 @@ class Simulator:
         except: self.start_zeros = True
         try: self.start_copies = self._json_obj["self.start_copies"]
         except: self.start_copies = False
+        try: self.verbose = self._json_obj["verbose"]
+        except: self.verbose = False
 
     def get_bodies_and_objective(self):
         return self.bodies, self.objective
@@ -128,10 +130,12 @@ class Simulator:
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
             terminated = True
             penalty = False
+            if self.verbose: print("Termination: Objective reached!")
         # Out of bounds
         elif abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
             terminated = True
             penalty = True
+            if self.verbose: print("Termination: out of bounds")
         # Check crash or Agent going through a body:
         else:
             for body in self.bodies:
@@ -140,15 +144,21 @@ class Simulator:
                     if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
                         terminated = True
                         penalty = True
+                        if self.verbose: print("Termination: agent collided with a body")
                     # Agent went through a body:
                     curr_pos = self.agent.position
                     prev_pos = self.agent.history[-2]
-                    if (body.position[0] - curr_pos[0])(prev_pos[1] - curr_pos[1]) == (body.position[1] - curr_pos[1])(prev_pos[0] - curr_pos[0]):
-                        if max(curr_pos[0], prev_pos[0]) >= body.position[0] and min(curr_pos[0], prev_pos[0]) <= body.position[0]:
-                            terminated = True
-                            penalty = True
-                    
-
+                    agent_line = (curr_pos - prev_pos)
+                    body_pos = (body.position - prev_pos)
+                    projection_body = np.dot(agent_line, body_pos)/np.dot(agent_line, agent_line) * agent_line
+                    # check that distance between orthogonal projection of body into agents path and body is less than tolerance
+                    if np.linalg.norm(body.position - (projection_body + prev_pos)) < self.tolerance:
+                        # check that body lies between the two positions of agent
+                        if max(curr_pos[0], prev_pos[0]) >= (projection_body + prev_pos)[0] and min(curr_pos[0], prev_pos[0]) <= (projection_body + prev_pos)[0]:
+                            if max(curr_pos[1], prev_pos[1]) >= (projection_body + prev_pos)[1] and min(curr_pos[1], prev_pos[1]) <= (projection_body + prev_pos)[1]:
+                                if self.verbose: print("Termination: agent went through a body")
+                                terminated = True
+                                penalty = True
         return terminated, penalty
 
 

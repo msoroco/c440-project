@@ -42,7 +42,7 @@ class Simulator:
         self.box_width = json_obj["box_width"]
         self.frame_stride = json_obj["frame_stride"]
         self.frames = json_obj["frames"]
-        self.penalty = self._json_obj["penalty"]
+        self.reward_scheme = [0, self._json_obj["penalty"], self._json_obj["reward"]]
         self.tolerance = self.box_width
         # TODO: Jsonize this
         self.start_zeros = True
@@ -104,8 +104,8 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        penalty, terminated = self.__get_terminated()
-        reward = self.__get_reward(penalty)
+        reward_index, terminated = self.__get_terminated()
+        reward = self.__get_reward(reward_index)
         return state, reward, terminated
     
     def __get_terminated(self):
@@ -113,26 +113,27 @@ class Simulator:
         Checkes whether the simulation should terminate if the spaceship has reached the objective,
         crashed into a planet, or went outside the simulation zone
 
-        Returns a tuple of True if terminated or False otherwise and True if it is a penalty termination
-        or False otherwise
+        Returns a tuple of True if terminated or False otherwise and 0 if no termination reward, 1
+        if a penalty is applied, and 2 if a reward for reach the objective
         """
         # Objective reached
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
-            return True, False
+            return True, 2
         # Out of bounds
         if abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
-            return True, True
-        hit_body = False
+            return True, 1
+        # Check for collisions
         for body in self.bodies:
             if body != self.agent:
                 # Crash
                 if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
-                    return True, True
-        return False, False
+                    return True, 1
+        return False, 0
 
 
-    def __get_reward(self, termination_reason):
-        return termination_reason * self.penalty + 1 / np.linalg.norm(0.001 + self.objective - self.agent.position)
+    def __get_reward(self, reward_index):
+        # No reward if 0, penalty is 1, reward is 2
+        return self.reward_scheme[reward_index] - 0.01 * (1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position))
     
 
     def __get_state(self):
@@ -200,8 +201,8 @@ class Body:
         self.history = np.array([position])
 
     def step(self):
-        self.velocity += 10*self.acceleration
-        self.position += 10*self.velocity
+        self.velocity += 5*self.acceleration
+        self.position += 5*self.velocity
         self.acceleration = np.zeros(2, dtype=float)
         self.history = np.vstack([self.history, self.position])
 

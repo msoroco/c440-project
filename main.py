@@ -13,10 +13,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def select_action(state, time_step):
+def select_action(state, episode):
     sample = random.random()
-    # exponential exploration/exploitation tradeoff
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
+    # Exponential exploration/exploitation tradeoff
+    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * episode / EPS_DECAY)
     if TEST or sample > eps_threshold:
         with torch.no_grad():
             return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0)).argmax(1)
@@ -76,11 +76,11 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
     parser.add_argument('--eps_start', type=float, default=0.9, help='Start value of epsilon')
     parser.add_argument('--eps_end', type=float, default=0.05, help='End value of epsilon')
-    parser.add_argument('--eps_decay', type=int, default=1000, help='Epsilon decay rate')
+    parser.add_argument('--eps_decay', type=int, default=100, help='Epsilon decay rate')
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('--episodes', type=int, default=100, help='Num episodes')
-    parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
+    parser.add_argument('--episodes', type=int, default=200, help='Num episodes')
+    parser.add_argument('--max_steps', type=int, default=1000, help='Maximum steps per episode')
     parser.add_argument('--simulation', type=str, default="./sim1.json", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
@@ -132,7 +132,7 @@ if __name__ == '__main__':
             anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
-            action = select_action(state, t)
+            action = select_action(state, i_episode)
             next_state, reward, terminated = sim.step(action)
 
             # Store the transition in memory
@@ -156,15 +156,17 @@ if __name__ == '__main__':
                     target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
                 target_net.load_state_dict(target_net_state_dict)
 
-            if (t + 1) % 1000 == 0:
+            if (t + 1) % 100 == 0:
                 print("Step:", t+1)
 
             if terminated:
                 print("Finished at:", t+1)
                 break
+        
+        if TEST or ANIMATE:
+            SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 
+                         DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
-    if TEST or ANIMATE:
-        SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames), DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
     if not TEST:
         save_model(policy_net, "policy_net.pth")

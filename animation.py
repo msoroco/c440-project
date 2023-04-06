@@ -15,7 +15,7 @@ class SimAnimation():
         self.states = frame
         self.limits = limits
         fig, self.ax = plt.subplots(1, 1, figsize = (6, 6))
-        anim = animation.FuncAnimation(fig, self.animate, frames = iterations+1, interval = 1)
+        anim = animation.FuncAnimation(fig, self.animate, frames = iterations, interval = 1)
         plt.show()
 
     def animate(self, end):

@@ -2,6 +2,7 @@ import os
 import numpy as np
 import random
 import argparse
+import gc
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
@@ -19,7 +20,7 @@ def select_action(state, episode):
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * episode / EPS_DECAY)
     if TEST or sample > eps_threshold:
         with torch.no_grad():
-            return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0)).argmax(1)
+            return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0).to(device)).argmax(1)
     else:
         return random.randint(0, n_actions-1)
     
@@ -27,7 +28,7 @@ def select_action(state, episode):
 def train():
     # Sample batch for all Transition elements (and a mask for final states)
     state_batch, action_batch, next_state_batch, reward_batch, final_state_mask, batch_size = memory.sample(BATCH_SIZE)
-    state_batch = state_batch.to()
+    state_batch = state_batch.to(device)
     action_batch = action_batch.to(device)
     next_state_batch = next_state_batch.to(device)
     reward_batch = reward_batch.to(device)
@@ -58,6 +59,9 @@ def train():
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    # Empty GPU
+    torch.cuda.empty_cache()
+    gc.collect()
 
 def save_model(model, path):
     torch.save(model.state_dict(), path)
@@ -113,7 +117,7 @@ if __name__ == '__main__':
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
     if os.path.isfile("policy_net.pth"):
-        policy_net.load_state_dict(torch.load("policy_net.pth", map_location=device))
+        load_model(policy_net, "policy_net.pth")
 
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -125,6 +129,9 @@ if __name__ == '__main__':
     memory = ReplayMemory(5000)
 
     for i_episode in range(EPISODES):
+        # Empty GPU
+        torch.cuda.empty_cache()
+        gc.collect()
         # Initialize simulation
         state = sim.start()
         # Initialize animation

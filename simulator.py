@@ -104,7 +104,7 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        reward_index, terminated = self.__get_terminated()
+        terminated, reward_index = self.__get_terminated()
         reward = self.__get_reward(reward_index)
         return state, reward, terminated
     

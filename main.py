@@ -113,7 +113,7 @@ if __name__ == '__main__':
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
     if os.path.isfile("policy_net.pth"):
-        load_model(policy_net, "policy_net.pth")
+        policy_net.load_state_dict(torch.load("policy_net.pth", map_location=device))
 
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -122,7 +122,7 @@ if __name__ == '__main__':
 
     loss_fn = nn.SmoothL1Loss()
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
-    memory = ReplayMemory(10000)
+    memory = ReplayMemory(5000)
 
     for i_episode in range(EPISODES):
         # Initialize simulation

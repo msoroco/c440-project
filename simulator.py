@@ -35,18 +35,27 @@ class Simulator:
         json_obj = Simulator.__load_json(filepath)
         self._json_obj = json_obj
         # State information
-        self.limits = json_obj["limits"]
-        if self.limits is None:
-            self.limits = 300
-        self.grid_radius = json_obj["grid_radius"]
-        self.box_width = json_obj["box_width"]
-        self.frame_stride = json_obj["frame_stride"]
-        self.frames = json_obj["frames"]
         self.reward_scheme = [0, self._json_obj["penalty"], self._json_obj["reward"]]
-        self.tolerance = self.box_width
-        # TODO: Jsonize this
-        self.start_zeros = True
-        self.start_copies = False
+        try: self.limits = json_obj["limits"]
+        except: self.limits = 300
+        try: self.grid_radius = json_obj["grid_radius"]
+        except: self.grid_radius = 10
+        try: self.box_width = json_obj["box_width"]
+        except: self.box_width = 20
+        try: self.frame_stride = json_obj["frame_stride"]
+        except: self.frame_stride = 1
+        try: self.frames = json_obj["frames"]
+        except: self.frames = 4
+        try: self.penalty = self._json_obj["penalty"]
+        except: self.penalty = -10
+        try: self.tolerance = self._json_obj["box_width"]
+        except: self.tolerance = self.box_width
+        try: self.start_zeros = self._json_obj["start_zeros"]
+        except: self.start_zeros = True
+        try: self.start_copies = self._json_obj["self.start_copies"]
+        except: self.start_copies = False
+        try: self.verbose = self._json_obj["verbose"]
+        except: self.verbose = False
 
     def get_bodies_and_objective(self):
         return self.bodies, self.objective
@@ -111,11 +120,13 @@ class Simulator:
     def __get_terminated(self):
         """
         Checkes whether the simulation should terminate if the spaceship has reached the objective,
-        crashed into a planet, or went outside the simulation zone
+        crashed into (or went through) a planet, or went outside the simulation zone.
 
         Returns a tuple of True if terminated or False otherwise and 0 if no termination reward, 1
         if a penalty is applied, and 2 if a reward for reach the objective
         """
+        terminated = False
+        penalty = False
         # Objective reached
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
             return True, 2

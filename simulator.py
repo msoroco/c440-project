@@ -87,9 +87,6 @@ class Simulator:
         if self.random_agent_position is True:
             self.agent.position = np.random.uniform(-self.limits, self.limits, size=2)
 
-        print(self.agent.position)
-        print(self.random_agent_position)
-
         self.bodies = []
         bodies_list = self._json_obj["bodies"]
         for body in bodies_list:

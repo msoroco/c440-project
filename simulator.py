@@ -19,7 +19,7 @@ class Simulator:
 
         JSON file attributes
         ---------
-        * `limits`: width/height of the whole square environment. Defaults to 300.
+        * `limits`: 1/2 width/height of the whole square environment. Defaults to 300.
         * `grid_radius`: The width & height in coordinates of the square frame around agent.
         * `box_width`: The width & height of a unit coordinate in the vector space.
         * `frames`: The number of past frames agent will maintain in addition to its observed frame.
@@ -27,6 +27,7 @@ class Simulator:
         * `tolerance`: The distance (in coordinates) to objective within which agent must achieve.
           Also the distance within which agent is considered to have collided with another body.
         * `agent`:
+        * `random_agent_position`: wether to set the agent position to be random on each start (will overwrite given JSON position)
         * `objective`: length 2 array of coordinate of the objective
         * `bodies`:
         * `start_zeros`: Have the simulation pad the missing frames with all zeros for first |`frames`| frames (default is do nothing)
@@ -56,6 +57,8 @@ class Simulator:
         except: self.start_copies = False
         try: self.verbose = self._json_obj["verbose"]
         except: self.verbose = False
+        try: self.random_agent_position = self._json_obj["random_agent_position"]
+        except: self.random_agent_position = True
 
     def get_bodies_and_objective(self):
         return self.bodies, self.objective
@@ -79,19 +82,19 @@ class Simulator:
 
         if seed is not None:
             random.seed(seed)
-        # TODO: change this to use rng if NONE
-
+        # TODO: change this to use rng if NONE (for velocity)
         self.agent = Spaceship(** self._json_obj["agent"])
-        self.bodies = []
+        if self.random_agent_position:
+            self.agent.position = np.random.uniform(-self.limits, self.limits, size=2)
 
-        # TODO: change this to use rng if NONE
+        self.bodies = []
         bodies_list = self._json_obj["bodies"]
         for body in bodies_list:
             self.bodies.append(Body(**body))
         self.bodies.insert(0, self.agent)
         
-        # TODO: change this to use rng if NONE
-        self.objective = np.array(self._json_obj["objective"])
+        try: self.objective = np.array(self._json_obj["objective"])
+        except: self.objective = np.random.uniform(-self.limits, self.limits, size=2)
 
         # Empty past frame queue
         self.past_frames = deque([], maxlen=self.frames*self.frame_stride)

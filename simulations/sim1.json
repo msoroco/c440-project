@@ -3,6 +3,7 @@
         {"mass": 30, "position": [0, 0], "velocity": [0, 0], "color": "orange"}
     ],
     "agent": {"position": [0, 160], "velocity": [0, 0], "color": "black", "speed": 3},
+    "random_agent_position": "False",
     "objective": [-100, -100],
     "penalty": -10,
     "reward": 10,

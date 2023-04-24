@@ -54,7 +54,6 @@ def parse_args(config, id):
         if value != "N/a":
             command += " --" + key + " "
             command += str(value)
-    command += " --id " + str(id)
     return command
 
 
@@ -78,10 +77,12 @@ if __name__ == '__main__':
     # parse JSON
     with open(args.in_path) as json_file:
         json_obj = json.load(json_file)
-        grid = parse_axis(json_obj["grid"])
+        grid = {}
+        if "grid" in json_obj:
+            grid = parse_axis(json_obj["grid"])
     
     # make runner
-    n_configs = len(next(iter(grid.values())))
+    n_configs = 1 if not grid else len(next(iter(grid.values())))
     line = 1
     iterations = 1 if "iter" not in json_obj else json_obj["iter"]
 

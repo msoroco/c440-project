@@ -1,0 +1,8 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "./simulations/sim1.json",
+    "experiment_name": "baseline",
+    "model": "baseline_policy_net",
+    "episodes": 10000,
+    "eps_decay": 10000
+}

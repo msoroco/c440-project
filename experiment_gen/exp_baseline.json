@@ -4,5 +4,7 @@
     "experiment_name": "baseline",
     "model": "baseline_policy_net",
     "episodes": 10000,
-    "eps_decay": 10000
+    "eps_decay": 10000,
+    "batch_size": 500,
+    "lr": 1e-5
 }

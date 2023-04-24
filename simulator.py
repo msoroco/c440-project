@@ -83,9 +83,11 @@ class Simulator:
         if seed is not None:
             random.seed(seed)
         # TODO: change this to use rng if NONE (for velocity)
+        if self.random_agent_position:
+            agent_position = np.random.uniform(-self.limits, self.limits, size=2)
+            self._json_obj["agent"]["position"] = agent_position
+
         self.agent = Spaceship(** self._json_obj["agent"])
-        if self.random_agent_position is True:
-            self.agent.position = np.random.uniform(-self.limits, self.limits, size=2)
 
         self.bodies = []
         bodies_list = self._json_obj["bodies"]

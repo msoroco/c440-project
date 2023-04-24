@@ -2,6 +2,7 @@ import os
 import numpy as np
 import random
 import argparse
+import gc
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
@@ -13,13 +14,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def select_action(state, time_step):
+def select_action(state, episode):
     sample = random.random()
-    # exponential exploration/exploitation tradeoff
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * time_step / EPS_DECAY)
+    # Exponential exploration/exploitation tradeoff
+    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * episode / EPS_DECAY)
     if TEST or sample > eps_threshold:
         with torch.no_grad():
-            return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0)).argmax(1)
+            return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0).to(device)).argmax(1)
     else:
         return random.randint(0, n_actions-1)
     
@@ -27,7 +28,7 @@ def select_action(state, time_step):
 def train():
     # Sample batch for all Transition elements (and a mask for final states)
     state_batch, action_batch, next_state_batch, reward_batch, final_state_mask, batch_size = memory.sample(BATCH_SIZE)
-    state_batch = state_batch.to()
+    state_batch = state_batch.to(device)
     action_batch = action_batch.to(device)
     next_state_batch = next_state_batch.to(device)
     reward_batch = reward_batch.to(device)
@@ -58,6 +59,9 @@ def train():
     # In-place gradient clipping
     torch.nn.utils.clip_grad_value_(policy_net.parameters(), 100)
     optimizer.step()
+    # Empty GPU
+    torch.cuda.empty_cache()
+    gc.collect()
 
 def save_model(model, path):
     torch.save(model.state_dict(), path)
@@ -76,11 +80,11 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
     parser.add_argument('--eps_start', type=float, default=0.9, help='Start value of epsilon')
     parser.add_argument('--eps_end', type=float, default=0.05, help='End value of epsilon')
-    parser.add_argument('--eps_decay', type=int, default=1000, help='Epsilon decay rate')
+    parser.add_argument('--eps_decay', type=int, default=100, help='Epsilon decay rate')
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
-    parser.add_argument('--episodes', type=int, default=100, help='Num episodes')
-    parser.add_argument('--max_steps', type=int, default=10000, help='Maximum steps per episode')
+    parser.add_argument('--episodes', type=int, default=200, help='Num episodes')
+    parser.add_argument('--max_steps', type=int, default=1000, help='Maximum steps per episode')
     parser.add_argument('--simulation', type=str, default="./sim1.json", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
@@ -122,9 +126,12 @@ if __name__ == '__main__':
 
     loss_fn = nn.SmoothL1Loss()
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
-    memory = ReplayMemory(10000)
+    memory = ReplayMemory(5000)
 
     for i_episode in range(EPISODES):
+        # Empty GPU
+        torch.cuda.empty_cache()
+        gc.collect()
         # Initialize simulation
         state = sim.start()
         # Initialize animation
@@ -132,7 +139,7 @@ if __name__ == '__main__':
             anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
-            action = select_action(state, t)
+            action = select_action(state, i_episode)
             next_state, reward, terminated = sim.step(action)
 
             # Store the transition in memory
@@ -156,15 +163,17 @@ if __name__ == '__main__':
                     target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
                 target_net.load_state_dict(target_net_state_dict)
 
-            if (t + 1) % 1000 == 0:
+            if (t + 1) % 100 == 0:
                 print("Step:", t+1)
 
             if terminated:
                 print("Finished at:", t+1)
                 break
+        
+        if TEST or ANIMATE:
+            SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 
+                         DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
-    if TEST or ANIMATE:
-        SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames), DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
     if not TEST:
         save_model(policy_net, "policy_net.pth")

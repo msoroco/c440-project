@@ -93,8 +93,8 @@ if __name__ == '__main__':
     parser.add_argument('--test', action="store_true", help='Test out agent')
     parser.add_argument('--animate', action="store_true", help='Animate (whether testing or not)')
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
-    parser.add_argument('--experiment_name', type=str, help'Name of experiment in wandb')
-    parser.add_argument('--model', default='policy_net', type=str, help'Name of model to store/load')
+    parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
+    parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
 
     args = parser.parse_args()
 
@@ -115,12 +115,12 @@ if __name__ == '__main__':
         EPISODES = 1
 
     # setup wandb
-    if config.wandb_project is not None:
+    if args.wandb_project is not None:
         import wandb
-        config = vars(args)
+        config = vars(args).copy()
         for k in ['draw_neighbourhood', 'test', 'animate', 'wandb_project', 'experiment_name']:
-            d.pop(k, None)
-        wandb.init(project=args.wandb_project, config=, name=args.experiment_name)
+            config.pop(k, None)
+        wandb.init(project=args.wandb_project, config=config, name=args.experiment_name)
         print("Initialized wandb")
 
     sim = Simulator(args.simulation)
@@ -132,8 +132,8 @@ if __name__ == '__main__':
     policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
-    if os.path.isfile('./models/'+args.model):
-        load_model(policy_net, './models/'+args.model)
+    if os.path.isfile(f"./models/{args.model}.pth"):
+        load_model(policy_net, f"./models/{args.model}.pth")
 
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -155,7 +155,7 @@ if __name__ == '__main__':
             anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
         for t in range(MAX_STEPS):
-            action = select_action(state, i_episode)
+            action = select_action(state)
             next_state, reward, terminated = sim.step(action)
 
             # Store the transition in memory
@@ -172,7 +172,7 @@ if __name__ == '__main__':
                 loss = train()
 
                 # Record output
-                if config.wandb_project is not None:
+                if args.wandb_project is not None:
                     wandb.log({"loss": loss, "episode": i_episode, "step": training_step})
 
                 # Soft update of the target network's weights
@@ -196,6 +196,5 @@ if __name__ == '__main__':
             SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 
                          DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
-
     if not TEST:
-        save_model(policy_net, './models/'+args.model)
+        save_model(policy_net, f"./models/{args.model}.pth")

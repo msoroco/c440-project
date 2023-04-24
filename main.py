@@ -66,12 +66,13 @@ def train():
     # Output loss
     return loss
 
+
 def save_model(model, path):
     torch.save(model.state_dict(), path)
 
 
-def load_model(model, path):
-    model.load_state_dict(torch.load(path))
+def load_model(model, path, device):
+    model.load_state_dict(torch.load(path, map_location=device))
 
 
 if __name__ == '__main__':
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
     if os.path.isfile(f"./models/{args.model}.pth"):
-        load_model(policy_net, f"./models/{args.model}.pth")
+        load_model(policy_net, f"./models/{args.model}.pth", device)
 
     target_net.load_state_dict(policy_net.state_dict())
 
@@ -154,9 +155,17 @@ if __name__ == '__main__':
         if TEST or ANIMATE:
             anim_frames = [sim.get_current_frame()]
         print("Starting episode", i_episode+1)
+        # Episodic metrics
+        mean_loss = 0
+        total_reward = 0
+        number_steps = 0
+        # Run
         for t in range(MAX_STEPS):
             action = select_action(state)
             next_state, reward, terminated = sim.step(action)
+            # Update episodic metrics
+            total_reward += reward
+            number_steps += 1
 
             # Store the transition in memory
             memory.push(state, action, next_state, reward, terminated)
@@ -169,11 +178,7 @@ if __name__ == '__main__':
                 anim_frames.append(sim.get_current_frame())
             if not TEST:
                 # Perform one step of the optimization (on the policy network)
-                loss = train()
-
-                # Record output
-                if args.wandb_project is not None:
-                    wandb.log({"loss": loss, "episode": i_episode, "step": training_step})
+                mean_loss += (loss - train()) / (t + 1)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -191,6 +196,10 @@ if __name__ == '__main__':
             if terminated:
                 print("Finished at:", t+1)
                 break
+        
+        # Record output
+        if args.wandb_project is not None:
+            wandb.log({"loss": loss, "reward": , "episode": i_episode, "step": training_step})
         
         if TEST or ANIMATE:
             SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 

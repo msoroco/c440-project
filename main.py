@@ -14,10 +14,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def select_action(state, episode):
+def select_action(state):
     sample = random.random()
     # Exponential exploration/exploitation tradeoff
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * episode / EPS_DECAY)
+    eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * training_step / EPS_DECAY)
     if TEST or sample > eps_threshold:
         with torch.no_grad():
             return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0).to(device)).argmax(1)
@@ -63,6 +63,9 @@ def train():
     torch.cuda.empty_cache()
     gc.collect()
 
+    # Output loss
+    return loss
+
 def save_model(model, path):
     torch.save(model.state_dict(), path)
 
@@ -80,15 +83,18 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, default=0.99, help='Discount factor')
     parser.add_argument('--eps_start', type=float, default=0.9, help='Start value of epsilon')
     parser.add_argument('--eps_end', type=float, default=0.05, help='End value of epsilon')
-    parser.add_argument('--eps_decay', type=int, default=100, help='Epsilon decay rate')
+    parser.add_argument('--eps_decay', type=int, default=1000, help='Epsilon decay rate')
     parser.add_argument('--tau', type=float, default=0.005, help='Soft update weight')
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--episodes', type=int, default=200, help='Num episodes')
     parser.add_argument('--max_steps', type=int, default=1000, help='Maximum steps per episode')
-    parser.add_argument('--simulation', type=str, default="./sim1.json", help='Simulation json')
+    parser.add_argument('--simulation', type=str, default="./simulations/sim1.json", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
     parser.add_argument('--animate', action="store_true", help='Animate (whether testing or not)')
+    parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
+    parser.add_argument('--experiment_name', type=str, help'Name of experiment in wandb')
+    parser.add_argument('--model', default='policy_net', type=str, help'Name of model to store/load')
 
     args = parser.parse_args()
 
@@ -103,11 +109,21 @@ if __name__ == '__main__':
     MAX_STEPS = args.max_steps
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
     TEST = args.test
-    if TEST: # There is no need to do multiple episodes when testing
-        EPISODES = 1
     ANIMATE = args.animate
 
-    sim = Simulator("./sim1.json")
+    if TEST: # There is no need to do multiple episodes when testing
+        EPISODES = 1
+
+    # setup wandb
+    if config.wandb_project is not None:
+        import wandb
+        config = vars(args)
+        for k in ['draw_neighbourhood', 'test', 'animate', 'wandb_project', 'experiment_name']:
+            d.pop(k, None)
+        wandb.init(project=args.wandb_project, config=, name=args.experiment_name)
+        print("Initialized wandb")
+
+    sim = Simulator(args.simulation)
     sim.start()
     state_shape, n_actions = sim.info()
 
@@ -116,18 +132,18 @@ if __name__ == '__main__':
     policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
     target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
-    if os.path.isfile("policy_net.pth"):
-        load_model(policy_net, "policy_net.pth")
+    if os.path.isfile('./models/'+args.model):
+        load_model(policy_net, './models/'+args.model)
 
     target_net.load_state_dict(policy_net.state_dict())
 
     print("Initialized model")
-    
 
     loss_fn = nn.SmoothL1Loss()
     optimizer = torch.optim.Adam(policy_net.parameters(), lr=LR)
     memory = ReplayMemory(5000)
 
+    training_step = 1
     for i_episode in range(EPISODES):
         # Empty GPU
         torch.cuda.empty_cache()
@@ -153,7 +169,11 @@ if __name__ == '__main__':
                 anim_frames.append(sim.get_current_frame())
             if not TEST:
                 # Perform one step of the optimization (on the policy network)
-                train()
+                loss = train()
+
+                # Record output
+                if config.wandb_project is not None:
+                    wandb.log({"loss": loss, "episode": i_episode, "step": training_step})
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′
@@ -163,6 +183,8 @@ if __name__ == '__main__':
                     target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
                 target_net.load_state_dict(target_net_state_dict)
 
+            # Increment step
+            training_step += 1
             if (t + 1) % 100 == 0:
                 print("Step:", t+1)
 
@@ -176,4 +198,4 @@ if __name__ == '__main__':
 
 
     if not TEST:
-        save_model(policy_net, "policy_net.pth")
+        save_model(policy_net, './models/'+args.model)

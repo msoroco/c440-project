@@ -116,7 +116,7 @@ class Simulator:
         terminated, reward_index = self.__get_terminated()
         reward = self.__get_reward(reward_index)
         return state, reward, terminated
-    
+
     def __get_terminated(self):
         """
         Checkes whether the simulation should terminate if the spaceship has reached the objective,
@@ -124,23 +124,50 @@ class Simulator:
 
         Returns a tuple of True if terminated or False otherwise and 0 if no termination reward, 1
         if a penalty is applied, and 2 if a reward for reach the objective
+
+        Returns a tuple (terminated, reward_type).
+            * `terminated`is True if terminated or False otherwise.
+            * `reward_type` is:
+                * 0 if no termination reward
+                * 1 if a penalty is applied
+                * 2 if a reward is applied for reaching the objective
         """
         terminated = False
-        penalty = False
+        reward_type = 0
         # Objective reached
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
-            return True, 2
+            terminated = True
+            reward_type = 2
+            if self.verbose: print("Termination: Objective reached!")
         # Out of bounds
-        if abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
-            return True, 1
-        # Check for collisions
-        for body in self.bodies:
-            if body != self.agent:
-                # Crash
-                if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
-                    return True, 1
-        return False, 0
-
+        elif abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
+            terminated = True
+            reward_type = 1
+            if self.verbose: print("Termination: out of bounds")
+        # Check crash or Agent going through a body:
+        else:
+            for body in self.bodies:
+                if body != self.agent:
+                    # Crash
+                    if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
+                        terminated = True
+                        reward_type = 1
+                        if self.verbose: print("Termination: agent collided with a body")
+                    # Agent went through a body:
+                    curr_pos = self.agent.position
+                    prev_pos = self.agent.history[-2]
+                    agent_line = (curr_pos - prev_pos)
+                    body_pos = (body.position - prev_pos)
+                    projection_body = np.dot(agent_line, body_pos)/np.dot(agent_line, agent_line) * agent_line
+                    # check that distance between orthogonal projection of body into agents path and body is less than tolerance
+                    if np.linalg.norm(body.position - (projection_body + prev_pos)) < self.tolerance:
+                        # check that body lies between the two positions of agent
+                        if max(curr_pos[0], prev_pos[0]) >= (projection_body + prev_pos)[0] and min(curr_pos[0], prev_pos[0]) <= (projection_body + prev_pos)[0]:
+                            if max(curr_pos[1], prev_pos[1]) >= (projection_body + prev_pos)[1] and min(curr_pos[1], prev_pos[1]) <= (projection_body + prev_pos)[1]:
+                                if self.verbose: print("Termination: agent went through a body")
+                                terminated = True
+                                reward_type = 1
+        return terminated, reward_type
 
     def __get_reward(self, reward_index):
         # No reward if 0, penalty is 1, reward is 2

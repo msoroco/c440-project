@@ -5,3 +5,5 @@ sim2/
 sim3.json
 testingTermination.py
 policy_net.pth
+env
+venv

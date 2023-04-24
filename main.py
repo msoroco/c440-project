@@ -89,7 +89,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--episodes', type=int, default=200, help='Num episodes')
     parser.add_argument('--max_steps', type=int, default=1000, help='Maximum steps per episode')
-    parser.add_argument('--simulation', type=str, default="./simulations/sim1.json", help='Simulation json')
+    parser.add_argument('--simulation', type=str, default="sim1", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
     parser.add_argument('--animate', action="store_true", help='Animate (whether testing or not)')
@@ -124,7 +124,7 @@ if __name__ == '__main__':
         wandb.init(project=args.wandb_project, config=config, name=args.experiment_name)
         print("Initialized wandb")
 
-    sim = Simulator(args.simulation)
+    sim = Simulator(f"./simulations/{args.simulation}.json")
     sim.start()
     state_shape, n_actions = sim.info()
 

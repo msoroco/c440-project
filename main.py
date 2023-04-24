@@ -178,7 +178,7 @@ if __name__ == '__main__':
                 anim_frames.append(sim.get_current_frame())
             if not TEST:
                 # Perform one step of the optimization (on the policy network)
-                mean_loss += (loss - train()) / (t + 1)
+                mean_loss += (train() - mean_loss) / (t + 1)
 
                 # Soft update of the target network's weights
                 # θ′ ← τ θ + (1 −τ )θ′

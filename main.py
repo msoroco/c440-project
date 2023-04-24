@@ -199,7 +199,11 @@ if __name__ == '__main__':
         
         # Record output
         if args.wandb_project is not None:
-            wandb.log({"loss": loss, "reward": , "episode": i_episode, "step": training_step})
+            wandb.log({"loss": mean_loss, "reward": total_reward, "number_steps": number_steps, "episode": i_episode, "step": training_step})
+
+        # Save model every 100 episodes
+        if (i_episode + 1) % 100 == 0 and not TEST:
+            save_model(policy_net, f"./models/{args.model}.pth")
         
         if TEST or ANIMATE:
             SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 

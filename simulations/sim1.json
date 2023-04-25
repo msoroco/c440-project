@@ -3,7 +3,7 @@
         {"mass": 30, "position": [0, 0], "velocity": [0, 0], "color": "orange"}
     ],
     "agent": {"position": [0, 160], "velocity": [0, 0], "color": "black", "speed": 3},
-    "random_agent_position": "False",
+    "random_agent_position": false,
     "objective": [-100, -100],
     "penalty": -10,
     "reward": 10,
@@ -12,5 +12,5 @@
     "frames": 4, 
     "frame_stride": 1,
     "limits": 300,
-    "verbose": "True"
+    "verbose": true
 }

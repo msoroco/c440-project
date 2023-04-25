@@ -1,0 +1,10 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim1",
+    "experiment_name": "baseline_short",
+    "model": "baseline_s_policy_net",
+    "episodes": 2500,
+    "eps_decay": 3000,
+    "batch_size": 500,
+    "lr": 1e-5
+}

@@ -1,0 +1,10 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim2",
+    "experiment_name": "random_starts_lr_eps",
+    "model": "random_starts_policy_net_2",
+    "episodes": 3500,
+    "eps_decay": 3000,
+    "batch_size": 500,
+    "lr": 1e-4
+}

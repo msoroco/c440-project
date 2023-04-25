@@ -96,7 +96,9 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
-
+    args, remaining = parser.parse_known_args()
+    parser.add_argument('--title',  type=str, default=args.simulation, help='Title for video to save (defaults to loaded sim.json)(if --animate)')
+    parser.add_argument('--save_freq',  type=int, default=args.episodes/3, help='save animation every ~ number of episodes (if --animate). Defaults to intervals of 1/3* --episodes')
     args = parser.parse_args()
 
     BATCH_SIZE = args.batch_size
@@ -206,7 +208,7 @@ if __name__ == '__main__':
             save_model(policy_net, f"./models/{args.model}.pth")
         
         if TEST or ANIMATE:
-            SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames)+1, 
+            SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames), i_episode + 1, args.save_freq, args.title, 
                          DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
     if not TEST:

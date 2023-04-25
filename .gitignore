@@ -2,8 +2,9 @@ __pycache__/
 .vscode
 sim1/
 sim2/
-sim3.json
+*.json
 testingTermination.py
-policy_net.pth
+*.pth
 env
 venv
+*.mp4

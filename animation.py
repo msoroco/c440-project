@@ -3,8 +3,12 @@ import matplotlib.pyplot as plt
 from matplotlib import animation
 from simulator import Spaceship
 
+# for some Windows machines
+# import matplotlib as mpl
+# mpl.rcParams['animation.ffmpeg_path'] = r'C:\\ProgramFiles2\\ffmpeg\\bin\\ffmpeg.exe'
+
 class SimAnimation():
-    def __init__(self, bodies, objective, limits, frame, iterations, draw_neighbourhood=False, grid_radius=None, box_width=None):
+    def __init__(self, bodies, objective, limits, frame, iterations, i_episode, save_freq, title = None, draw_neighbourhood=False, grid_radius=None, box_width=None):
         self.draw_neighbourhood = draw_neighbourhood
         if self.draw_neighbourhood and (grid_radius==None or box_width==None):
             raise Exception("If draw_neighbourhood is set to True, grid_radius and box_width must be specified") 
@@ -14,16 +18,28 @@ class SimAnimation():
         self.objective = objective
         self.states = frame
         self.limits = limits
+        self.save_stride = save_freq
         fig, self.ax = plt.subplots(1, 1, figsize = (6, 6))
         anim = animation.FuncAnimation(fig, self.animate, frames = iterations, interval = 1)
-        plt.show()
+        # plt.show()
+
+        # works on windows too but needs to include path in imports above
+        # saving to m4 using ffmpeg writer
+        # title: `episode`_sim-name.mp4
+        if (i_episode) % self.save_stride == 0:
+            writervideo = animation.FFMpegWriter(fps=60)
+            name = str(i_episode) + "_" + title + ".mp4"
+            anim.save(name, writer=writervideo)
+
+
+
 
     def animate(self, end):
         start = max(0, end-100)
         self.ax.cla()
         self.ax.scatter(self.objective[0], self.objective[1], marker='*', s=150)
         for body in self.bodies:
-            self.ax.plot(body.history[start:end+1, 0], body.history[start:end+1, 1], ".", color=body.color)
+            self.ax.plot(body.history[start:end, 0], body.history[start:end, 1], ".", color=body.color)
             if isinstance(body, Spaceship) and self.draw_neighbourhood:
                 self.draw_state(self.states[end], body.history[end])
         self.ax.set_xlim(-self.limits, self.limits)

@@ -6,7 +6,7 @@ import gc
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
-from model import DQN
+from model import DQN, FullyConnectedDQN
 from itertools import count
 
 import torch
@@ -96,6 +96,7 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
+    parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
     args, remaining = parser.parse_known_args()
     parser.add_argument('--title',  type=str, default=args.simulation, help='Title for video to save (defaults to loaded sim.json)(if --animate)')
     parser.add_argument('--save_freq',  type=int, default=args.episodes/3, help='save animation every ~ number of episodes (if --animate). Defaults to intervals of 1/3* --episodes')
@@ -132,8 +133,12 @@ if __name__ == '__main__':
 
     print("Initialized simulator")
 
-    policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
-    target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
+    if args.classifier == "FC":
+        policy_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+        target_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+    else:
+        policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
+        target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
 
     if os.path.isfile(f"./models/{args.model}.pth"):
         load_model(policy_net, f"./models/{args.model}.pth", device)

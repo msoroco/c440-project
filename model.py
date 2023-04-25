@@ -52,3 +52,34 @@ class DQN(nn.Module):
         x = torch.flatten(x, 1)
         x = self.lins(x)
         return x
+    
+
+class FullyConnectedDQN(nn.Module):
+    def __init__(self, state_shape : list, n_actions : int, layers=[64, 64, 32, 16]):
+        """
+        Parameters
+        ----------
+        state_shape : list of int
+            The shape of an input state as (channels, height, width)
+        n_actions : int
+            The number of actions
+        layers : [int], optional
+            The size of each hidden layers
+        """
+        super(FullyConnectedDQN, self).__init__()
+        state_shape = np.array(state_shape)
+
+        # lin layer setup
+        input_size = np.prod(state_shape)
+        lin_sizes = np.hstack(([input_size], layers, [n_actions]))
+        lin_layers = []
+        for i in range(len(layers)):
+            lin_layers.append(nn.Linear(lin_sizes[i], lin_sizes[i+1]))
+            if i < len(layers)-1: 
+                lin_layers.append(nn.ReLU())
+        self.lins = nn.Sequential(*lin_layers)
+
+    def forward(self, x):
+        x = torch.flatten(x, 1)
+        x = self.lins(x)
+        return x

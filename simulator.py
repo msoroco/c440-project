@@ -49,7 +49,7 @@ class Simulator:
         except: self.frames = 4
         try: self.penalty = self._json_obj["penalty"]
         except: self.penalty = -10
-        try: self.tolerance = self._json_obj["box_width"]
+        try: self.tolerance = self._json_obj["tolerance"]
         except: self.tolerance = self.box_width
         try: self.start_zeros = self._json_obj["start_zeros"]
         except: self.start_zeros = True

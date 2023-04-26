@@ -216,7 +216,7 @@ if __name__ == '__main__':
             if terminated:
                 print("Finished at:", t+1)
                 # Update objective proportion
-                objective_proportion += (1 if termination_condition == 2 else 0 - proportion_objective) / (i_episode + 1)
+                objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
         
         # Switch to offline training

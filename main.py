@@ -18,7 +18,7 @@ def select_action(state):
     sample = random.random()
     # Exponential exploration/exploitation tradeoff
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * training_step / EPS_DECAY)
-    if TEST or sample > eps_threshold:
+    if TEST or OFFLINE or sample > eps_threshold:
         with torch.no_grad():
             return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0).to(device)).argmax(1)
     else:
@@ -77,61 +77,6 @@ def soft_update_target():
     target_net.load_state_dict(target_net_state_dict)
 
 
-def offline_training():
-    # To always choose optimal action
-    TEST = True
-    # Online training
-    for off_episode in range(OFFLINE_TRAINING_EPS):
-        i_episode = EPISODES + off_episode
-        # Empty GPU
-        torch.cuda.empty_cache()
-        gc.collect()
-        # Initialize simulation
-        state = sim.start()
-        print("Starting offline episode", off_episode+1)
-        # Episodic metrics
-        mean_loss = 0
-        total_reward = 0
-        number_steps = 0
-        # Run simulation and training
-        for t in range(MAX_STEPS):
-            action = select_action(state)
-            next_state, reward, termination_condition = sim.step(action)
-            terminated = True if termination_condition != 0 else False
-            # Update episodic metrics
-            total_reward += reward
-            number_steps += 1
-
-            # Move to the next state
-            state = next_state
-
-            # Perform one step of the optimization (on the policy network)
-            mean_loss += (train() - mean_loss) / (t + 1)
-            # Update target parameters
-            soft_update_target()
-
-            # Increment step
-            training_step += 1
-            if (t + 1) % 100 == 0:
-                print("Step:", t+1)
-            # Check for termination
-            if terminated:
-                print("Finished at:", t+1)
-                # Update objective proportion
-                objective_proportion += (1 if termination_condition == 2 else 0 - proportion_objective) / (i_episode + 1)
-                break
-        
-        # Record output
-        if args.wandb_project is not None:
-            wandb.log({"loss": mean_loss, "objective_proportion": objective_proportion, "reward": total_reward, 
-                       "number_steps": number_steps, "episode": i_episode, "step": training_step})
-        # Save model every 100 episodes
-        if (off_episode + 1) % 100 == 0:
-            save_model(policy_net, f"./models/{args.model}.pth")
-    # Set it back
-    TEST = False
-
-
 def save_model(model, path):
     torch.save(model.state_dict(), path)
 
@@ -186,6 +131,7 @@ if __name__ == '__main__':
     TEST = args.test
     ANIMATE = args.animate
     OFFLINE_TRAINING_EPS = args.offline_training
+    OFFLINE = False
 
     if TEST: # There is no need to do multiple episodes when testing
         EPISODES = 1
@@ -223,8 +169,7 @@ if __name__ == '__main__':
 
     training_step = 1
     objective_proportion = 0
-    # Online training
-    for i_episode in range(EPISODES):
+    for i_episode in range(EPISODES + OFFLINE_TRAINING_EPS):
         # Empty GPU
         torch.cuda.empty_cache()
         gc.collect()
@@ -233,7 +178,7 @@ if __name__ == '__main__':
         # Initialize animation
         if TEST or ANIMATE:
             anim_frames = [sim.get_current_frame()]
-        print("Starting episode", i_episode+1)
+        print(f"Starting{" (offline) " if OFFLINE else " "}episode: {i_episode+1}")
         # Episodic metrics
         mean_loss = 0
         total_reward = 0
@@ -248,7 +193,8 @@ if __name__ == '__main__':
             number_steps += 1
 
             # Store the transition in memory
-            memory.push(state, action, next_state, reward, terminated)
+            if not OFFLINE:
+                memory.push(state, action, next_state, reward, terminated)
 
             # Move to the next state
             state = next_state
@@ -273,6 +219,10 @@ if __name__ == '__main__':
                 objective_proportion += (1 if termination_condition == 2 else 0 - proportion_objective) / (i_episode + 1)
                 break
         
+        # Switch to offline training
+        if not OFFLINE and i_episode >= EPISODES:
+            OFFLINE = True
+
         # Record output
         if args.wandb_project is not None:
             wandb.log({"loss": mean_loss, "objective_proportion": objective_proportion, "reward": total_reward, 
@@ -284,10 +234,6 @@ if __name__ == '__main__':
         if TEST or ANIMATE:
             SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames), i_episode + 1, args.save_freq, args.title, 
                          DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
-
-    # Offline training
-    if OFFLINE_TRAINING_EPS > 0:
-        offline_training()
 
     # Save final model
     if not TEST:

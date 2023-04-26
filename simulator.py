@@ -90,9 +90,11 @@ class Simulator:
         self.agent = Spaceship(** self._json_obj["agent"])
 
         self.bodies = []
+        # self.bodiesQueues = [] # to track the evolution of bodies for heatmap
         bodies_list = self._json_obj["bodies"]
         for body in bodies_list:
             self.bodies.append(Body(**body))
+            # self.bodiesQueues.append(deque([], maxlen=self.frames*self.frame_stride))
         self.bodies.insert(0, self.agent)
         
         try: self.objective = np.array(self._json_obj["objective"])
@@ -197,14 +199,17 @@ class Simulator:
         return state
     
 
-    def __get_current_frame(self):
+    def __get_current_frame(self, position=None):
+        if position is None:
+            position = self.agent.position
+
         radius = (self.grid_radius + 0.5) * self.box_width
         obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
         objective_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
 
         # Assign objective
         # Transform and shift to bottom left corner of grid
-        position = (self.objective - self.agent.position)
+        position = (self.objective - position)
         # TODO: rotation goes here
         position = position + radius*np.ones(2)
         index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
@@ -213,7 +218,7 @@ class Simulator:
         # Assign obstacles
         for body in self.bodies:
             if body != self.agent:
-                position = body.position - self.agent.position
+                position = body.position - position
                 # TODO: rotation goes here
                 if np.max(np.abs(position)) <= radius:
                     position = position + radius*np.ones(2)
@@ -227,6 +232,12 @@ class Simulator:
     # for animation. May not be needed
     def get_current_frame(self):
         return self.__get_current_frame()
+    
+    
+    def get_current_frame(self, position):
+        """ For heatmap. Gets the frame around at given position (as if agent was there)
+        """
+        return self.__get_current_frame(position)
 
     def __load_json(filepath):
         with open(filepath) as json_file:

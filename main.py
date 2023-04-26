@@ -96,6 +96,12 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
+    # Model stuff
+    parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in CNN')
+    parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in CNN')
+    parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in CNN')
+    parser.add_argument('--n_out_channels', default=16, type=int, help='Number of output channels after convolutions')
+    parser.add_argument('--n_lins', default=3, type=int, help='Number of linear layers after convolutions')
     args, remaining = parser.parse_known_args()
     parser.add_argument('--title',  type=str, default=args.simulation, help='Title for video to save (defaults to loaded sim.json)(if --animate)')
     parser.add_argument('--save_freq',  type=int, default=args.episodes/3, help='save animation every ~ number of episodes (if --animate). Defaults to intervals of 1/3* --episodes')
@@ -132,8 +138,10 @@ if __name__ == '__main__':
 
     print("Initialized simulator")
 
-    policy_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
-    target_net = DQN(state_shape, n_actions, kernel_size=3).to(device)
+    policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+                     pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
+    target_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+                     pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
 
     if os.path.isfile(f"./models/{args.model}.pth"):
         load_model(policy_net, f"./models/{args.model}.pth", device)

@@ -178,7 +178,7 @@ if __name__ == '__main__':
         # Initialize animation
         if TEST or ANIMATE:
             anim_frames = [sim.get_current_frame()]
-        print(f"Starting{" (offline) " if OFFLINE else " "}episode: {i_episode+1}")
+        print(f"Starting{' (offline) ' if OFFLINE else ' '}episode: {i_episode+1}")
         # Episodic metrics
         mean_loss = 0
         total_reward = 0

@@ -63,7 +63,13 @@ class Simulator:
     def get_bodies_and_objective(self):
         return self.bodies, self.objective
     
-    
+    def get_environment_info(self):
+        """
+        Returns the unit length mapping (box_width) and the width of environment
+        """
+        return self.box_width, self.limits
+
+
     def info(self):
         """
         Returns the number of actions (including do nothing) and the shape of states
@@ -181,18 +187,25 @@ class Simulator:
         return self.reward_scheme[reward_index] - 0.01 * (1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position))
     
 
-    def __get_state(self):
-        frame = self.__get_current_frame()
+    def __get_state(self, position=None, forHeatmap=False):
+        if forHeatmap:
+            frame = self.__get_current_frame(position)
+        else:
+            frame = self.__get_current_frame()
         # Create state
         state = frame
         # Attach past frames
         for i in range(self.frames):
-            if len(self.past_frames) >= (i+1)*self.frame_stride:
+            if forHeatmap: # for heatmap
+                state = np.concatenate((state, np.zeros(frame.shape)))
+            elif len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
             elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
                 state = np.concatenate((state, np.zeros(frame.shape)))
             elif self.start_copies: # If you can't attach a past frame, attach a copy of itself
                 state = np.concatenate((state, frame))
+        if forHeatmap: # do not update state
+            return state
         # Update info
         self.past_frames.append(frame) # deque will automatically evict oldest frame if full
         self.__current_state_shape = state.shape
@@ -234,10 +247,10 @@ class Simulator:
         return self.__get_current_frame()
     
     
-    def get_current_frame(self, position):
-        """ For heatmap. Gets the frame around at given position (as if agent was there)
+    def get_current_state(self, position):
+        """ For heatmap. Gets the state around at given position (as if agent was there) (past frames are 0)
         """
-        return self.__get_current_frame(position)
+        return self.__get_state(position, forHeatmap=True)
 
     def __load_json(filepath):
         with open(filepath) as json_file:

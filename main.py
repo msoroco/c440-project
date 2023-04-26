@@ -3,6 +3,7 @@ import numpy as np
 import random
 import argparse
 import gc
+import matplotlib.pyplot as plt
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
@@ -12,6 +13,66 @@ from itertools import count
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+def draw_heatmap(sim : Simulator):
+    box_width, limits = sim.get_environment_info()
+    _, n_actions = sim.info()
+    states = [] 
+    # np.zeros((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
+    for x in range(-limits, limits, box_width):
+        for y in range(-limits, limits, box_width):
+            states.append(sim.get_current_state([x, y]))
+    
+    states = torch.tensor(np.array(states), dtype=torch.float, requires_grad=False)
+    states = states.to(device)
+    Qscores = policy_net(states)
+    Qscores = Qscores.detach().numpy()
+    Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))), order='F')
+    print(Qscores.shape)
+
+    # debug:
+    x = sim.get_current_state([0, 0])
+    x = torch.tensor(np.array([x]), dtype=torch.float, requires_grad=False)
+    # x = states.to(device)
+    xQscores = policy_net(x)
+    xQscores = xQscores.detach().numpy()
+    print(xQscores)
+    print(Qscores[0, 15, 15])
+    print(Qscores[1, 15, 15])
+    print(Qscores[2, 15, 15])
+    print(Qscores[3, 15, 15])
+    print(Qscores[4, 15, 15])
+
+    x = sim.get_current_state([-300, -300])
+    x = torch.tensor(np.array([x]), dtype=torch.float, requires_grad=False)
+    # x = states.to(device)
+    xQscores = policy_net(x)
+    xQscores = xQscores.detach().numpy()
+    print(xQscores)
+    print(Qscores[0, 0, 0])
+    print(Qscores[1, 0, 0])
+    print(Qscores[2, 0, 0])
+    print(Qscores[3, 0, 0])
+    print(Qscores[4, 0, 0])
+
+
+
+
+
+    fig, ax = plt.subplots(nrows=1, ncols=2)
+    subfigs = fig.subfigures(nrows=1, ncols=2)
+
+    axsLeft = subfigs[0].subplots(2, 1, sharey=True)
+    axsRight = subfigs[1].subplots(3, 1, sharex=True)
+    for i in range(2):
+        axsLeft[i].imshow(Qscores[i, :, :])
+    for j in range(3):
+        axsRight[j].imshow(Qscores[2+j, :, :])
+        # ax[i].figure.colorbar(im, ax = ax)
+    plt.show()
+    plt.savefig('heatmap.png')
+    pass
 
 
 def select_action(state):
@@ -206,7 +267,7 @@ if __name__ == '__main__':
             if terminated:
                 print("Finished at:", t+1)
                 break
-        
+        draw_heatmap(sim)
         # Record output
         if args.wandb_project is not None:
             wandb.log({"loss": mean_loss, "reward": total_reward, "number_steps": number_steps, "episode": i_episode, "step": training_step})

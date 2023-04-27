@@ -1,0 +1,16 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim_big_stride_faster_speed",
+    "experiment_name": "big_stride_faster_speed",
+    "model": "big_stride_faster_speed",
+    "episodes": 6000,
+    "eps_decay": 3000,
+    "batch_size": 500,
+    "offline_training": 2000,
+    "lr": 1e-4,
+    "n_convs": 1, 
+    "kernel_size": 3,
+    "pool_size": 0,
+    "n_out_channels": 4,
+    "n_lins": 2
+}

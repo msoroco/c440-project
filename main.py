@@ -15,7 +15,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-def draw_heatmap(sim : Simulator):
+def draw_heatmap(sim : Simulator, title):
     box_width, limits = sim.get_environment_info()
     _, n_actions = sim.info()
     states = [] 
@@ -51,7 +51,7 @@ def draw_heatmap(sim : Simulator):
     fig.colorbar(pcm, ax=axsLeft[:], shrink=1)
 
     plt.show()
-    plt.savefig('heatmap.png')
+    plt.savefig('heatmap_' + title + '.png')
 
 
 def select_action(state):
@@ -269,7 +269,8 @@ if __name__ == '__main__':
                 objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
 
-        # draw_heatmap(sim)
+        if i_episode < 10 or i_episode % 20 == 0:
+            draw_heatmap(sim, args.title)
         
         # Switch to offline training
         if not OFFLINE and i_episode >= EPISODES:

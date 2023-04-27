@@ -26,11 +26,11 @@ if __name__ == '__main__':
     states = [sim.get_current_frame()]
     
     for i in range(T):
-        action = random.randint(0, 4)
+        action = (i % 2) *2 #random.randint(0, 4)
         next_state, reward, terminated = sim.step(action)
         states.append(sim.get_current_frame())
         # print(sim.info())
         if terminated == True:
             break
 
-    anim = SimAnimation(sim.bodies, sim.objective, sim.limits, states, len(states), DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
+    anim = SimAnimation(sim.bodies, sim.objective, sim.limits, states, len(states), 1, 1, "speed5.5", DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)

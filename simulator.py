@@ -186,9 +186,9 @@ class Simulator:
         return self.reward_scheme[reward_index] - 0.01 * (1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position))
     
 
-    def __get_state(self, position=None, forHeatmap=False):
+    def __get_state(self, given_position=None, forHeatmap=False):
         if forHeatmap:
-            frame = self.__get_current_frame(position)
+            frame = self.__get_current_frame(given_position)
         else:
             frame = self.__get_current_frame()
         # Create state
@@ -197,8 +197,8 @@ class Simulator:
         for i in range(self.frames):
             if forHeatmap: # for heatmap
                 state = np.concatenate((state, np.zeros(frame.shape)))
-            elif len(self.past_frames) >= (i+1)*self.frame_stride:
-                state = np.concatenate((state, self.past_frames[i*self.frame_stride]))
+            elif (len(self.past_frames) - 1 - i) - self.frame_stride * (i+1) >= 0:
+                state = np.concatenate((state, self.past_frames[(len(self.past_frames) - 1 - i) - self.frame_stride * (i+1)]))
             elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
                 state = np.concatenate((state, np.zeros(frame.shape)))
             elif self.start_copies: # If you can't attach a past frame, attach a copy of itself

@@ -211,9 +211,9 @@ class Simulator:
         return state
     
 
-    def __get_current_frame(self, position=None):
-        if position is None:
-            position = self.agent.position
+    def __get_current_frame(self, given_position=None):
+        if given_position is None:
+            given_position = self.agent.position
 
         radius = (self.grid_radius + 0.5) * self.box_width
         obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
@@ -221,7 +221,7 @@ class Simulator:
 
         # Assign objective
         # Transform and shift to bottom left corner of grid
-        position = (self.objective - position)
+        position = (self.objective - given_position)
         # TODO: rotation goes here
         position = position + radius*np.ones(2)
         index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
@@ -230,7 +230,7 @@ class Simulator:
         # Assign obstacles
         for body in self.bodies:
             if body != self.agent:
-                position = body.position - position
+                position = body.position - given_position
                 # TODO: rotation goes here
                 if np.max(np.abs(position)) <= radius:
                     position = position + radius*np.ones(2)

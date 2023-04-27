@@ -49,7 +49,7 @@ class Simulator:
         except: self.frames = 4
         try: self.penalty = self._json_obj["penalty"]
         except: self.penalty = -10
-        try: self.tolerance = self._json_obj["box_width"]
+        try: self.tolerance = self._json_obj["tolerance"]
         except: self.tolerance = self.box_width
         try: self.start_zeros = self._json_obj["start_zeros"]
         except: self.start_zeros = True
@@ -115,7 +115,11 @@ class Simulator:
         """
         Continues the simulation by one step with the given action
 
-        Returns the next state and reward and whether objective is reached
+        Returns the next state and reward and termination condition
+        * `termination_condition` is:
+                * 0 if no termination reward
+                * 1 if a penalty is applied
+                * 2 if a reward is applied for reaching the objective
         """
         self.agent.do_action(action)
         for body in self.bodies:
@@ -126,36 +130,33 @@ class Simulator:
                     body1.gravity(body2)
 
         state = self.__get_state()
-        terminated, reward_index = self.__get_terminated()
-        reward = self.__get_reward(reward_index)
-        return state, reward, terminated
+        termination_condition = self.__get_terminated()
+        reward = self.__get_reward(termination_condition)
+        return state, reward, termination_condition
 
     def __get_terminated(self):
         """
         Checkes whether the simulation should terminate if the spaceship has reached the objective,
         crashed into (or went through) a planet, or went outside the simulation zone.
 
-        Returns a tuple of True if terminated or False otherwise and 0 if no termination reward, 1
-        if a penalty is applied, and 2 if a reward for reach the objective
+        Returns a termination condition, 0 means not terminated, 1 if a penalty is applied, and 2 if
+        a reward for reach the objective
 
-        Returns a tuple (terminated, reward_type).
-            * `terminated`is True if terminated or False otherwise.
-            * `reward_type` is:
+        Returns termination_condition.
+            * `termination_condition` is:
                 * 0 if no termination reward
                 * 1 if a penalty is applied
                 * 2 if a reward is applied for reaching the objective
         """
-        terminated = False
-        reward_type = 0
+        termination_condition = 0
         # Objective reached
         if np.linalg.norm(self.objective - self.agent.position) < self.tolerance: 
             terminated = True
-            reward_type = 2
+            termination_condition = 2
             if self.verbose: print("Termination: Objective reached!")
         # Out of bounds
         elif abs(self.agent.position[0]) > self.limits or abs(self.agent.position[1]) > self.limits:
-            terminated = True
-            reward_type = 1
+            termination_condition = 1
             if self.verbose: print("Termination: out of bounds")
         # Check crash or Agent going through a body:
         else:
@@ -163,8 +164,7 @@ class Simulator:
                 if body != self.agent:
                     # Crash
                     if np.linalg.norm(body.position - self.agent.position) < self.tolerance:
-                        terminated = True
-                        reward_type = 1
+                        termination_condition = 1
                         if self.verbose: print("Termination: agent collided with a body")
                     # Agent went through a body:
                     curr_pos = self.agent.position
@@ -178,9 +178,8 @@ class Simulator:
                         if max(curr_pos[0], prev_pos[0]) >= (projection_body + prev_pos)[0] and min(curr_pos[0], prev_pos[0]) <= (projection_body + prev_pos)[0]:
                             if max(curr_pos[1], prev_pos[1]) >= (projection_body + prev_pos)[1] and min(curr_pos[1], prev_pos[1]) <= (projection_body + prev_pos)[1]:
                                 if self.verbose: print("Termination: agent went through a body")
-                                terminated = True
-                                reward_type = 1
-        return terminated, reward_type
+                                termination_condition = 1
+        return termination_condition
 
     def __get_reward(self, reward_index):
         # No reward if 0, penalty is 1, reward is 2

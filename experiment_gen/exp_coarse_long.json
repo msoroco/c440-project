@@ -1,0 +1,15 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim_coarse_less_tolerance",
+    "experiment_name": "coarse_grid_long",
+    "model": "coarse_grid_long",
+    "episodes": 6000,
+    "eps_decay": 4000,
+    "batch_size": 500,
+    "lr": 1e-4,
+    "n_convs": 1, 
+    "kernel_size": 3,
+    "pool_size": 2,
+    "n_out_channels": 10,
+    "n_lins": 2
+}

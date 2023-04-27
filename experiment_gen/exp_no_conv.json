@@ -1,0 +1,15 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim_no_past_frames",
+    "experiment_name": "no_conv",
+    "model": "no_conv",
+    "episodes": 3500,
+    "eps_decay": 3000,
+    "batch_size": 500,
+    "lr": 1e-4,
+    "n_convs": 0, 
+    "kernel_size": 0,
+    "pool_size": 0,
+    "n_out_channels": 2,
+    "n_lins": 2
+}

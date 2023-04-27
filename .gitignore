@@ -7,3 +7,4 @@ testingTermination.py
 policy_net.pth
 env
 venv
+*.mp4

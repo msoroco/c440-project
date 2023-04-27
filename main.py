@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
-from model import DQN
+from model import DQN, FullyConnectedDQN
 from itertools import count
 
 import torch
@@ -58,7 +58,7 @@ def select_action(state):
     sample = random.random()
     # Exponential exploration/exploitation tradeoff
     eps_threshold = EPS_END + (EPS_START - EPS_END) * np.exp(-1. * training_step / EPS_DECAY)
-    if TEST or sample > eps_threshold:
+    if TEST or OFFLINE or sample > eps_threshold:
         with torch.no_grad():
             return policy_net(torch.tensor(state, dtype=torch.float).unsqueeze(0).to(device)).argmax(1)
     else:
@@ -107,6 +107,16 @@ def train():
     return loss
 
 
+def soft_update_target():
+    # Soft update of the target network's weights
+    # θ′ ← τ θ + (1 −τ )θ′
+    target_net_state_dict = target_net.state_dict()
+    policy_net_state_dict = policy_net.state_dict()
+    for key in policy_net_state_dict:
+        target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+    target_net.load_state_dict(target_net_state_dict)
+
+
 def save_model(model, path):
     torch.save(model.state_dict(), path)
 
@@ -129,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4, help='Learning rate')
     parser.add_argument('--episodes', type=int, default=200, help='Num episodes')
     parser.add_argument('--max_steps', type=int, default=1000, help='Maximum steps per episode')
+    parser.add_argument('--offline_training', type=int, default=0, help='Additional offline training')
     parser.add_argument('--simulation', type=str, default="sim1", help='Simulation json')
     parser.add_argument('--draw_neighbourhood', action="store_true", help='Draw neighbourhood')
     parser.add_argument('--test', action="store_true", help='Test out agent')
@@ -136,7 +147,9 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
-    # Model stuff
+
+    parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
+    # CNN Model stuff
     parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in CNN')
     parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in CNN')
     parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in CNN')
@@ -159,6 +172,8 @@ if __name__ == '__main__':
     DRAW_NEIGHBOURHOOD = args.draw_neighbourhood
     TEST = args.test
     ANIMATE = args.animate
+    OFFLINE_TRAINING_EPS = args.offline_training
+    OFFLINE = False
 
     if TEST: # There is no need to do multiple episodes when testing
         EPISODES = 1
@@ -178,11 +193,16 @@ if __name__ == '__main__':
 
     print("Initialized simulator")
 
-    policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+    if args.classifier == "FC":
+        policy_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+        target_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+    else:
+        policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
-    target_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+        target_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
 
+    
     if os.path.isfile(f"./models/{args.model}.pth"):
         load_model(policy_net, f"./models/{args.model}.pth", device)
 
@@ -195,7 +215,8 @@ if __name__ == '__main__':
     memory = ReplayMemory(5000)
 
     training_step = 1
-    for i_episode in range(EPISODES):
+    objective_proportion = 0
+    for i_episode in range(EPISODES + OFFLINE_TRAINING_EPS):
         # Empty GPU
         torch.cuda.empty_cache()
         gc.collect()
@@ -204,21 +225,23 @@ if __name__ == '__main__':
         # Initialize animation
         if TEST or ANIMATE:
             anim_frames = [sim.get_current_frame()]
-        print("Starting episode", i_episode+1)
+        print(f"Starting{' (offline) ' if OFFLINE else ' '}episode: {i_episode+1}")
         # Episodic metrics
         mean_loss = 0
         total_reward = 0
         number_steps = 0
-        # Run
+        # Run simulation and training
         for t in range(MAX_STEPS):
             action = select_action(state)
-            next_state, reward, terminated = sim.step(action)
+            next_state, reward, termination_condition = sim.step(action)
+            terminated = True if termination_condition != 0 else False
             # Update episodic metrics
             total_reward += reward
             number_steps += 1
 
             # Store the transition in memory
-            memory.push(state, action, next_state, reward, terminated)
+            if not OFFLINE:
+                memory.push(state, action, next_state, reward, terminated)
 
             # Move to the next state
             state = next_state
@@ -229,28 +252,30 @@ if __name__ == '__main__':
             if not TEST:
                 # Perform one step of the optimization (on the policy network)
                 mean_loss += (train() - mean_loss) / (t + 1)
-
-                # Soft update of the target network's weights
-                # θ′ ← τ θ + (1 −τ )θ′
-                target_net_state_dict = target_net.state_dict()
-                policy_net_state_dict = policy_net.state_dict()
-                for key in policy_net_state_dict:
-                    target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-                target_net.load_state_dict(target_net_state_dict)
+                # Update target parameters
+                soft_update_target()
 
             # Increment step
             training_step += 1
             if (t + 1) % 100 == 0:
                 print("Step:", t+1)
-
+            # Check for termination
             if terminated:
                 print("Finished at:", t+1)
+                # Update objective proportion
+                objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
+
         draw_heatmap(sim)
+        
+        # Switch to offline training
+        if not OFFLINE and i_episode >= EPISODES:
+            OFFLINE = True
+
         # Record output
         if args.wandb_project is not None:
-            wandb.log({"loss": mean_loss, "reward": total_reward, "number_steps": number_steps, "episode": i_episode, "step": training_step})
-
+            wandb.log({"loss": mean_loss, "objective_proportion": objective_proportion, "reward": total_reward, 
+                       "number_steps": number_steps, "episode": i_episode, "step": training_step})
         # Save model every 100 episodes
         if (i_episode + 1) % 100 == 0 and not TEST:
             save_model(policy_net, f"./models/{args.model}.pth")
@@ -259,5 +284,6 @@ if __name__ == '__main__':
             SimAnimation(sim.bodies, sim.objective, sim.limits, anim_frames, len(anim_frames), i_episode + 1, args.save_freq, args.title, 
                          DRAW_NEIGHBOURHOOD, sim.grid_radius, sim.box_width)
 
+    # Save final model
     if not TEST:
         save_model(policy_net, f"./models/{args.model}.pth")

@@ -6,7 +6,7 @@ import gc
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
-from model import DQN
+from model import DQN, FullyConnectedDQN
 from itertools import count
 
 import torch
@@ -107,7 +107,9 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
-    # Model stuff
+
+    parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
+    # CNN Model stuff
     parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in CNN')
     parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in CNN')
     parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in CNN')
@@ -151,11 +153,16 @@ if __name__ == '__main__':
 
     print("Initialized simulator")
 
-    policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+    if args.classifier == "FC":
+        policy_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+        target_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+    else:
+        policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
-    target_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
+        target_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
 
+    
     if os.path.isfile(f"./models/{args.model}.pth"):
         load_model(policy_net, f"./models/{args.model}.pth", device)
 

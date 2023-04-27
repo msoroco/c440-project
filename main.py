@@ -34,50 +34,29 @@ def draw_heatmap(sim : Simulator):
     # c = X.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))), order='F')
     Qscores = Qscores.T.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
     Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
-    print(Qscores.shape)
 
-    # debug:
-    x = sim.get_current_state([0, 0])
-    x = torch.tensor(np.array([x]), dtype=torch.float, requires_grad=False)
-    # x = states.to(device)
-    xQscores = policy_net(x)
-    xQscores = xQscores.detach().numpy()
-    # print(xQscores)
-    # print(Qscores[0, 15, 15])
-    # print(Qscores[1, 15, 15])
-    # print(Qscores[2, 15, 15])
-    # print(Qscores[3, 15, 15])
-    # print(Qscores[4, 15, 15])
+    fig, ax = plt.subplots()
+    subfigs = fig.subfigures(nrows=2, ncols=1)
 
-    x = sim.get_current_state([-300, -300])
-    x = torch.tensor(np.array([x]), dtype=torch.float, requires_grad=False)
-    # x = states.to(device)
-    xQscores = policy_net(x)
-    xQscores = xQscores.detach().numpy()
-    # print(xQscores)
-    # print(Qscores[0, 0, 0])
-    # print(Qscores[1, 0, 0])
-    # print(Qscores[2, 0, 0])
-    # print(Qscores[3, 0, 0])
-    # print(Qscores[4, 0, 0])
+    axsLeft = subfigs[0].subplots(1, 2, sharex=True)
+    axsRight = subfigs[1].subplots(1, 3, sharex=True)
 
+    axsLeft[0].imshow(Qscores[0, :, :])
+    axsLeft[0].set_title('Q(s, Up)')
+    axsLeft[1].imshow(Qscores[1, :, :])
+    axsLeft[1].set_title('Q(s, Down)')
+    axsRight[0].imshow(Qscores[2, :, :])
+    axsRight[0].set_title('Q(s, Left)')
+    axsRight[1].imshow(Qscores[3, :, :])
+    axsRight[1].set_title('Q(s, Right)')
+    axsRight[2].imshow(Qscores[4, :, :])
+    axsRight[2].set_title('Q(s, nothing)')
 
+    pcm = ax.imshow(np.amax(Qscores, 0))
+    fig.colorbar(pcm, ax=axsLeft[:], shrink=1)
 
-
-
-    fig, ax = plt.subplots(nrows=1, ncols=2)
-    subfigs = fig.subfigures(nrows=1, ncols=2)
-
-    axsLeft = subfigs[0].subplots(2, 1, sharey=True)
-    axsRight = subfigs[1].subplots(3, 1, sharex=True)
-    for i in range(2):
-        axsLeft[i].imshow(Qscores[i, :, :])
-    for j in range(3):
-        axsRight[j].imshow(Qscores[2+j, :, :])
-        # ax[i].figure.colorbar(im, ax = ax)
     plt.show()
     plt.savefig('heatmap.png')
-    pass
 
 
 def select_action(state):

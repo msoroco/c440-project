@@ -73,7 +73,7 @@ class FullyConnectedDQN(nn.Module):
         input_size = np.prod(state_shape)
         lin_sizes = np.hstack(([input_size], layers, [n_actions]))
         lin_layers = []
-        for i in range(len(layers)):
+        for i in range(len(layers)+1):
             lin_layers.append(nn.Linear(lin_sizes[i], lin_sizes[i+1]))
             if i < len(layers)-1: 
                 lin_layers.append(nn.ReLU())

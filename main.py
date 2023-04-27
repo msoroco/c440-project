@@ -19,7 +19,6 @@ def draw_heatmap(sim : Simulator):
     box_width, limits = sim.get_environment_info()
     _, n_actions = sim.info()
     states = [] 
-    # np.zeros((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
     for x in range(-limits, limits, box_width):
         for y in range(-limits, limits, box_width):
             states.append(sim.get_current_state([x, y]))
@@ -28,10 +27,6 @@ def draw_heatmap(sim : Simulator):
     states = states.to(device)
     Qscores = policy_net(states)
     Qscores = Qscores.detach().numpy()
-    # X = vQscores.T
-    # a = vQscores[:, 1]
-    # b = X.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
-    # c = X.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))), order='F')
     Qscores = Qscores.T.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
     Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
 

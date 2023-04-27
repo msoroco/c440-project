@@ -187,12 +187,17 @@ class Simulator:
     
 
     def __get_state(self, position=None, forHeatmap=False):
-        frame = self.__get_current_frame()
+        if forHeatmap:
+            frame = self.__get_current_frame(position)
+        else:
+            frame = self.__get_current_frame()
         # Create state
         state = frame
         # Attach past frames
         for i in range(self.frames):
-            if len(self.past_frames) >= (i+1)*self.frame_stride:
+            if forHeatmap: # for heatmap
+                state = np.concatenate((state, np.zeros(frame.shape)))
+            elif len(self.past_frames) >= (i+1)*self.frame_stride:
                 state = np.concatenate((state, self.past_frames[-(i+1)*self.frame_stride]))
             elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
                 state = np.concatenate((state, np.zeros(frame.shape)))
@@ -230,10 +235,13 @@ class Simulator:
     #     return state
     
     def __get_current_frame(self, position=None):
-        frame = self.objective - self.agent.position
+        if position is None:
+            position = self.agent.position
+
+        frame = self.objective - position
         for body in self.bodies:
             if body != self.agent:
-                frame = np.concatenate((frame, body.position - self.agent.position))
+                frame = np.concatenate((frame, body.position - position))
         return frame
         
     # def __get_current_frame(self, position=None):

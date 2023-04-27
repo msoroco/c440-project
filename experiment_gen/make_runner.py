@@ -53,7 +53,10 @@ def parse_args(config, id):
     for key, value in config.items():
         if value != "N/a":
             command += " --" + key + " "
-            command += str(value)
+            if key == "layers":
+                command += " ".join(str(item) for item in value)
+            else:
+                command += str(value)
     return command
 
 
@@ -63,6 +66,8 @@ def parse_environment_variables(json_obj):
         if key == "test" or key == "draw_neighbourhood" or key == "animate":
             if value == True:
                 command += " --" + key 
+        elif key == "layers":
+                command += " --" + key + " " + " ".join(str(item) for item in value)
         elif key != "grid" and key != "iter":
             command += " --" + key + " " + str(value)
     return command

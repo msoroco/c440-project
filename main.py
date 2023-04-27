@@ -149,12 +149,15 @@ if __name__ == '__main__':
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
 
     parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
-    # CNN Model stuff
-    parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in CNN')
-    parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in CNN')
-    parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in CNN')
+    # FC Model stuff
+    parser.add_argument("--layers", default=[64, 64, 32, 16], nargs="+", type=int, help="List of integers as dimensions of layer")
+    # DQN Model stuff
+    parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in DQN')
+    parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in DQN')
+    parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in DQN')
     parser.add_argument('--n_out_channels', default=16, type=int, help='Number of output channels after convolutions')
     parser.add_argument('--n_lins', default=3, type=int, help='Number of linear layers after convolutions')
+    # Video stuff
     args, remaining = parser.parse_known_args()
     parser.add_argument('--title',  type=str, default=args.simulation, help='Title for video to save (defaults to loaded sim.json)(if --animate)')
     parser.add_argument('--save_freq',  type=int, default=args.episodes/3, help='save animation every ~ number of episodes (if --animate). Defaults to intervals of 1/3* --episodes')
@@ -194,8 +197,8 @@ if __name__ == '__main__':
     print("Initialized simulator")
 
     if args.classifier == "FC":
-        policy_net = FullyConnectedDQN(state_shape, n_actions).to(device)
-        target_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+        policy_net = FullyConnectedDQN(state_shape, n_actions, layers=args.layers).to(device)
+        target_net = FullyConnectedDQN(state_shape, n_actions, layers=args.layers).to(device)
     else:
         policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
@@ -266,7 +269,7 @@ if __name__ == '__main__':
                 objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
 
-        draw_heatmap(sim)
+        # draw_heatmap(sim)
         
         # Switch to offline training
         if not OFFLINE and i_episode >= EPISODES:

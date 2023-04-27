@@ -28,7 +28,12 @@ def draw_heatmap(sim : Simulator):
     states = states.to(device)
     Qscores = policy_net(states)
     Qscores = Qscores.detach().numpy()
-    Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))), order='F')
+    # X = vQscores.T
+    # a = vQscores[:, 1]
+    # b = X.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
+    # c = X.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))), order='F')
+    Qscores = Qscores.T.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
+    Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
     print(Qscores.shape)
 
     # debug:
@@ -37,24 +42,24 @@ def draw_heatmap(sim : Simulator):
     # x = states.to(device)
     xQscores = policy_net(x)
     xQscores = xQscores.detach().numpy()
-    print(xQscores)
-    print(Qscores[0, 15, 15])
-    print(Qscores[1, 15, 15])
-    print(Qscores[2, 15, 15])
-    print(Qscores[3, 15, 15])
-    print(Qscores[4, 15, 15])
+    # print(xQscores)
+    # print(Qscores[0, 15, 15])
+    # print(Qscores[1, 15, 15])
+    # print(Qscores[2, 15, 15])
+    # print(Qscores[3, 15, 15])
+    # print(Qscores[4, 15, 15])
 
     x = sim.get_current_state([-300, -300])
     x = torch.tensor(np.array([x]), dtype=torch.float, requires_grad=False)
     # x = states.to(device)
     xQscores = policy_net(x)
     xQscores = xQscores.detach().numpy()
-    print(xQscores)
-    print(Qscores[0, 0, 0])
-    print(Qscores[1, 0, 0])
-    print(Qscores[2, 0, 0])
-    print(Qscores[3, 0, 0])
-    print(Qscores[4, 0, 0])
+    # print(xQscores)
+    # print(Qscores[0, 0, 0])
+    # print(Qscores[1, 0, 0])
+    # print(Qscores[2, 0, 0])
+    # print(Qscores[3, 0, 0])
+    # print(Qscores[4, 0, 0])
 
 
 

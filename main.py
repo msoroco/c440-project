@@ -3,6 +3,7 @@ import numpy as np
 import random
 import argparse
 import gc
+import matplotlib.pyplot as plt
 from simulator import Body, Spaceship, Simulator
 from animation import SimAnimation
 from replay import Transition, ReplayMemory
@@ -12,6 +13,45 @@ from itertools import count
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+
+def draw_heatmap(sim : Simulator):
+    box_width, limits = sim.get_environment_info()
+    _, n_actions = sim.info()
+    states = [] 
+    for x in range(-limits, limits, box_width):
+        for y in range(-limits, limits, box_width):
+            states.append(sim.get_current_state([x, y]))
+    
+    states = torch.tensor(np.array(states), dtype=torch.float, requires_grad=False)
+    states = states.to(device)
+    Qscores = policy_net(states)
+    Qscores = Qscores.detach().numpy()
+    Qscores = Qscores.T.reshape((n_actions, int(np.floor(2*limits/box_width)) * int(np.floor(2*limits/box_width))))
+    Qscores = Qscores.reshape((n_actions, int(np.floor(2*limits/box_width)), int(np.floor(2*limits/box_width))))
+
+    fig, ax = plt.subplots()
+    subfigs = fig.subfigures(nrows=2, ncols=1)
+
+    axsLeft = subfigs[0].subplots(1, 2, sharex=True)
+    axsRight = subfigs[1].subplots(1, 3, sharex=True)
+
+    axsLeft[0].imshow(Qscores[0, :, :])
+    axsLeft[0].set_title('Q(s, Up)')
+    axsLeft[1].imshow(Qscores[1, :, :])
+    axsLeft[1].set_title('Q(s, Down)')
+    axsRight[0].imshow(Qscores[2, :, :])
+    axsRight[0].set_title('Q(s, Left)')
+    axsRight[1].imshow(Qscores[3, :, :])
+    axsRight[1].set_title('Q(s, Right)')
+    axsRight[2].imshow(Qscores[4, :, :])
+    axsRight[2].set_title('Q(s, nothing)')
+
+    pcm = ax.imshow(np.amax(Qscores, 0))
+    fig.colorbar(pcm, ax=axsLeft[:], shrink=1)
+
+    plt.show()
+    plt.savefig('heatmap.png')
 
 
 def select_action(state):
@@ -225,6 +265,8 @@ if __name__ == '__main__':
                 # Update objective proportion
                 objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
+
+        draw_heatmap(sim)
         
         # Switch to offline training
         if not OFFLINE and i_episode >= EPISODES:

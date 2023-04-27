@@ -8,7 +8,7 @@ from simulator import Spaceship
 # mpl.rcParams['animation.ffmpeg_path'] = r'C:\\ProgramFiles2\\ffmpeg\\bin\\ffmpeg.exe'
 
 class SimAnimation():
-    def __init__(self, bodies, objective, limits, frame, iterations, i_episode, save_freq, title = None, draw_neighbourhood=False, grid_radius=None, box_width=None):
+    def __init__(self, bodies, objective, limits, frame, iterations, i_episode, save_freq, title = "", draw_neighbourhood=False, grid_radius=None, box_width=None):
         self.draw_neighbourhood = draw_neighbourhood
         if self.draw_neighbourhood and (grid_radius==None or box_width==None):
             raise Exception("If draw_neighbourhood is set to True, grid_radius and box_width must be specified") 

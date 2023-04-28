@@ -75,7 +75,7 @@ class FullyConnectedDQN(nn.Module):
         lin_layers = []
         for i in range(len(layers)+1):
             lin_layers.append(nn.Linear(lin_sizes[i], lin_sizes[i+1]))
-            if i < len(layers)-1: 
+            if i < len(layers): 
                 lin_layers.append(nn.ReLU())
         self.lins = nn.Sequential(*lin_layers)
 

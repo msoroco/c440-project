@@ -107,14 +107,24 @@ def train():
     return loss
 
 
-def soft_update_target():
-    # Soft update of the target network's weights
-    # θ′ ← τ θ + (1 −τ )θ′
-    target_net_state_dict = target_net.state_dict()
-    policy_net_state_dict = policy_net.state_dict()
-    for key in policy_net_state_dict:
-        target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-    target_net.load_state_dict(target_net_state_dict)
+def update_target():
+    if HARD_UPDATE:
+        if training_step % HARD_UPDATE_STEPS == 0:
+           # Hard update of the target network's weights
+            # θ′ ← θ
+            target_net_state_dict = target_net.state_dict()
+            policy_net_state_dict = policy_net.state_dict()
+            for key in policy_net_state_dict:
+                target_net_state_dict[key] = policy_net_state_dict[key]
+            target_net.load_state_dict(target_net_state_dict) 
+    else:
+        # Soft update of the target network's weights
+        # θ′ ← τ θ + (1 −τ )θ′
+        target_net_state_dict = target_net.state_dict()
+        policy_net_state_dict = policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+        target_net.load_state_dict(target_net_state_dict)
 
 
 def save_model(model, path):
@@ -147,14 +157,18 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
+    parser.add_argument('--hard_update', default=0, type=int, help='Number of training steps between hard update of target network, if <= 0, then do soft updates')
 
     parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
-    # CNN Model stuff
-    parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in CNN')
-    parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in CNN')
-    parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in CNN')
+    # FC Model stuff
+    parser.add_argument("--layers", default=[64, 64, 32, 16], nargs="+", type=int, help="List of integers as dimensions of layer")
+    # DQN Model stuff
+    parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in DQN')
+    parser.add_argument('--kernel_size', default=3, type=int, help='Kernel size in DQN')
+    parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in DQN')
     parser.add_argument('--n_out_channels', default=16, type=int, help='Number of output channels after convolutions')
     parser.add_argument('--n_lins', default=3, type=int, help='Number of linear layers after convolutions')
+    # Video stuff
     args, remaining = parser.parse_known_args()
     parser.add_argument('--title',  type=str, default=args.simulation, help='Title for video & heatmap to save (defaults to loaded sim.json)(if --animate)')
     parser.add_argument('--save_freq',  type=int, default=args.episodes/3, help='save animation every ~ number of episodes (if --animate). Defaults to intervals of 1/3* --episodes')
@@ -174,6 +188,8 @@ if __name__ == '__main__':
     ANIMATE = args.animate
     OFFLINE_TRAINING_EPS = args.offline_training
     OFFLINE = False
+    HARD_UPDATE = True if args.hard_update > 0 else False
+    HARD_UPDATE_STEPS = args.hard_update
 
     if TEST: # There is no need to do multiple episodes when testing
         EPISODES = 1
@@ -194,8 +210,8 @@ if __name__ == '__main__':
     print("Initialized simulator")
 
     if args.classifier == "FC":
-        policy_net = FullyConnectedDQN(state_shape, n_actions).to(device)
-        target_net = FullyConnectedDQN(state_shape, n_actions).to(device)
+        policy_net = FullyConnectedDQN(state_shape, n_actions, layers=args.layers).to(device)
+        target_net = FullyConnectedDQN(state_shape, n_actions, layers=args.layers).to(device)
     else:
         policy_net = DQN(state_shape, n_actions, n_convs=args.n_convs, kernel_size=args.kernel_size, 
                      pool_size=args.pool_size, n_out_channels=args.n_out_channels, n_lins=args.n_lins).to(device)
@@ -253,7 +269,7 @@ if __name__ == '__main__':
                 # Perform one step of the optimization (on the policy network)
                 mean_loss += (train() - mean_loss) / (t + 1)
                 # Update target parameters
-                soft_update_target()
+                update_target()
 
             # Increment step
             training_step += 1
@@ -265,7 +281,7 @@ if __name__ == '__main__':
                 # Update objective proportion
                 objective_proportion += (1 if termination_condition == 2 else 0 - objective_proportion) / (i_episode + 1)
                 break
-
+        
         if i_episode < 10 or i_episode % 20 == 0:
             draw_heatmap(sim, args.title)   
         

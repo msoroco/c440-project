@@ -1,0 +1,13 @@
+{
+    "wandb_project": "rl-project",
+    "simulation": "sim_linear_state",
+    "experiment_name": "linear_state",
+    "model": "linear_state",
+    "classifier": "FC",
+    "episodes": 3500,
+    "eps_decay": 3000,
+    "batch_size": 500,
+    "offline_training": 2000,
+    "lr": 1e-4,
+    "layers": [24, 24]
+}

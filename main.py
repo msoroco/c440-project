@@ -107,14 +107,24 @@ def train():
     return loss
 
 
-def soft_update_target():
-    # Soft update of the target network's weights
-    # θ′ ← τ θ + (1 −τ )θ′
-    target_net_state_dict = target_net.state_dict()
-    policy_net_state_dict = policy_net.state_dict()
-    for key in policy_net_state_dict:
-        target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
-    target_net.load_state_dict(target_net_state_dict)
+def update_target():
+    if HARD_UPDATE:
+        if training_step % HARD_UPDATE_STEPS == 0:
+           # Hard update of the target network's weights
+            # θ′ ← θ
+            target_net_state_dict = target_net.state_dict()
+            policy_net_state_dict = policy_net.state_dict()
+            for key in policy_net_state_dict:
+                target_net_state_dict[key] = policy_net_state_dict[key]
+            target_net.load_state_dict(target_net_state_dict) 
+    else:
+        # Soft update of the target network's weights
+        # θ′ ← τ θ + (1 −τ )θ′
+        target_net_state_dict = target_net.state_dict()
+        policy_net_state_dict = policy_net.state_dict()
+        for key in policy_net_state_dict:
+            target_net_state_dict[key] = policy_net_state_dict[key]*TAU + target_net_state_dict[key]*(1-TAU)
+        target_net.load_state_dict(target_net_state_dict)
 
 
 def save_model(model, path):
@@ -147,13 +157,14 @@ if __name__ == '__main__':
     parser.add_argument('--wandb_project', type=str, help='Save results to wandb in the specified project')
     parser.add_argument('--experiment_name', type=str, help='Name of experiment in wandb')
     parser.add_argument('--model', default='policy_net', type=str, help='Name of model to store/load')
+    parser.add_argument('--hard_update', default=0, type=int, help='Number of training steps between hard update of target network, if <= 0, then do soft updates')
 
     parser.add_argument('--classifier', default='DQN', type=str, help="The type fo classifier to train (DQN, FC)")
     # FC Model stuff
     parser.add_argument("--layers", default=[64, 64, 32, 16], nargs="+", type=int, help="List of integers as dimensions of layer")
     # DQN Model stuff
     parser.add_argument('--n_convs', default=2, type=int, help='Number of convolutional layers in DQN')
-    parser.add_argument('--kernel_size', default=5, type=int, help='Kernel size in DQN')
+    parser.add_argument('--kernel_size', default=3, type=int, help='Kernel size in DQN')
     parser.add_argument('--pool_size', default=2, type=int, help='Pooling size in DQN')
     parser.add_argument('--n_out_channels', default=16, type=int, help='Number of output channels after convolutions')
     parser.add_argument('--n_lins', default=3, type=int, help='Number of linear layers after convolutions')
@@ -177,6 +188,8 @@ if __name__ == '__main__':
     ANIMATE = args.animate
     OFFLINE_TRAINING_EPS = args.offline_training
     OFFLINE = False
+    HARD_UPDATE = True if args.hard_update > 0 else False
+    HARD_UPDATE_STEPS = args.hard_update
 
     if TEST: # There is no need to do multiple episodes when testing
         EPISODES = 1
@@ -256,7 +269,7 @@ if __name__ == '__main__':
                 # Perform one step of the optimization (on the policy network)
                 mean_loss += (train() - mean_loss) / (t + 1)
                 # Update target parameters
-                soft_update_target()
+                update_target()
 
             # Increment step
             training_step += 1

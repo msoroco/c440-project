@@ -183,32 +183,8 @@ class Simulator:
 
     def __get_reward(self, reward_index):
         # No reward if 0, penalty is 1, reward is 2
-        return self.reward_scheme[reward_index] - 0.01 * (1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position))
+        return self.reward_scheme[reward_index] - 0.01 * np.clip(1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position), 0, 1)
     
-
-    def __get_state(self, position=None, forHeatmap=False):
-        if forHeatmap:
-            frame = self.__get_current_frame(position)
-        else:
-            frame = self.__get_current_frame()
-        # Create state
-        state = frame
-        # Attach past frames
-        for i in range(self.frames):
-            if forHeatmap: # for heatmap
-                state = np.concatenate((state, np.zeros(frame.shape)))
-            elif len(self.past_frames) >= (i+1)*self.frame_stride:
-                state = np.concatenate((state, self.past_frames[-(i+1)*self.frame_stride]))
-            elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
-                state = np.concatenate((state, np.zeros(frame.shape)))
-            elif self.start_copies: # If you can't attach a past frame, attach a copy of itself
-                state = np.concatenate((state, frame))
-        if forHeatmap: # do not update state
-            return state
-        # Update info
-        self.past_frames.append(frame) # deque will automatically evict oldest frame if full
-        self.__current_state_shape = state.shape
-        return state
 
     # def __get_state(self, position=None, forHeatmap=False):
     #     if forHeatmap:
@@ -233,46 +209,70 @@ class Simulator:
     #     self.past_frames.append(frame) # deque will automatically evict oldest frame if full
     #     self.__current_state_shape = state.shape
     #     return state
-    
-    def __get_current_frame(self, position=None):
-        if position is None:
-            position = self.agent.position
 
-        frame = self.objective - position
-        for body in self.bodies:
-            if body != self.agent:
-                frame = np.concatenate((frame, body.position - position))
-        return frame
-        
+    def __get_state(self, position=None, forHeatmap=False):
+        if forHeatmap:
+            frame = self.__get_current_frame(position)
+        else:
+            frame = self.__get_current_frame()
+        # Create state
+        state = frame
+        # Attach past frames
+        for i in range(self.frames):
+            if forHeatmap: # for heatmap
+                state = np.concatenate((state, np.zeros(frame.shape)))
+            elif len(self.past_frames) >= (i+1)*self.frame_stride:
+                state = np.concatenate((state, self.past_frames[-(i+1)*self.frame_stride]))
+            elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
+                state = np.concatenate((state, np.zeros(frame.shape)))
+            elif self.start_copies: # If you can't attach a past frame, attach a copy of itself
+                state = np.concatenate((state, frame))
+        if forHeatmap: # do not update state
+            return state
+        # Update info
+        self.past_frames.append(frame) # deque will automatically evict oldest frame if full
+        self.__current_state_shape = state.shape
+        return state
+    
     # def __get_current_frame(self, position=None):
     #     if position is None:
     #         position = self.agent.position
 
-    #     radius = (self.grid_radius + 0.5) * self.box_width
-    #     obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
-    #     objective_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
-
-    #     # Assign objective
-    #     # Transform and shift to bottom left corner of grid
-    #     position = (self.objective - position)
-    #     # TODO: rotation goes here
-    #     position = position + radius*np.ones(2)
-    #     index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
-    #     objective_grid[index[1], index[0]] = 1
-
-    #     # Assign obstacles
+    #     frame = self.objective - position
     #     for body in self.bodies:
     #         if body != self.agent:
-    #             position = body.position - position
-    #             # TODO: rotation goes here
-    #             if np.max(np.abs(position)) <= radius:
-    #                 position = position + radius*np.ones(2)
-    #                 index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
-    #                 obstacle_grid[index[1], index[0]] = 1
-
-    #     # Create frame       
-    #     frame = np.stack((obstacle_grid, objective_grid), axis=0)
+    #             frame = np.concatenate((frame, body.position - position))
     #     return frame
+        
+    def __get_current_frame(self, given_position=None):
+        if given_position is None:
+            given_position = self.agent.position
+
+        radius = (self.grid_radius + 0.5) * self.box_width
+        obstacle_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
+        objective_grid = np.zeros((2*self.grid_radius+1, 2*self.grid_radius+1))
+
+        # Assign objective
+        # Transform and shift to bottom left corner of grid
+        position = self.objective - given_position
+        # TODO: rotation goes here
+        position = position + radius*np.ones(2)
+        index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
+        objective_grid[index[1], index[0]] = 1
+
+        # Assign obstacles
+        for body in self.bodies:
+            if body != self.agent:
+                position = body.position - given_position
+                # TODO: rotation goes here
+                if np.max(np.abs(position)) <= radius:
+                    position = position + radius*np.ones(2)
+                    index = np.clip(np.floor(position/self.box_width).astype(int), 0, 2*self.grid_radius)
+                    obstacle_grid[index[1], index[0]] = 1
+
+        # Create frame       
+        frame = np.stack((obstacle_grid, objective_grid), axis=0)
+        return frame
     
     # for animation. May not be needed
     def get_current_frame(self):

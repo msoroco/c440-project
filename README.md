@@ -2,7 +2,7 @@
 
 # Deep Q-Learning
 
-We use a deep Q-netowrk to train a spaceship agent to navigate a dynamic star system. We present an exploration of the challenges and ideas that we encountered throughout our investigation of the problem
+We use a deep Q-netowrk to train a spaceship agent to navigate a dynamic star system. We present an exploration of the challenges and ideas that we encountered throughout our investigation of the problem.
 
 <!-- <img src="https://user-images.githubusercontent.com/63081584/235216113-a238a10a-cf90-4307-ac82-93948e089d7f.gif" width="500" height="500"/> -->
 

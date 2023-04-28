@@ -186,33 +186,9 @@ class Simulator:
         return self.reward_scheme[reward_index] - 0.01 * np.clip(1 - self.tolerance / np.linalg.norm(self.objective - self.agent.position), 0, 1)
     
 
-    # def __get_state(self, position=None, forHeatmap=False):
-    #     if forHeatmap:
-    #         frame = self.__get_current_frame(position)
-    #     else:
-    #         frame = self.__get_current_frame()
-    #     # Create state
-    #     state = frame
-    #     # Attach past frames
-    #     for i in range(self.frames):
-    #         if forHeatmap: # for heatmap
-    #             state = np.concatenate((state, np.zeros(frame.shape)))
-    #         elif len(self.past_frames) >= (i+1)*self.frame_stride:
-    #             state = np.concatenate((state, self.past_frames[-(i+1)*self.frame_stride]))
-    #         elif self.start_zeros: # TODO: If you can't attach a past frame, attach a dummy frame
-    #             state = np.concatenate((state, np.zeros(frame.shape)))
-    #         elif self.start_copies: # If you can't attach a past frame, attach a copy of itself
-    #             state = np.concatenate((state, frame))
-    #     if forHeatmap: # do not update state
-    #         return state
-    #     # Update info
-    #     self.past_frames.append(frame) # deque will automatically evict oldest frame if full
-    #     self.__current_state_shape = state.shape
-    #     return state
-
-    def __get_state(self, position=None, forHeatmap=False):
+    def __get_state(self, given_position=None, forHeatmap=False):
         if forHeatmap:
-            frame = self.__get_current_frame(position)
+            frame = self.__get_current_frame(given_position)
         else:
             frame = self.__get_current_frame()
         # Create state
@@ -234,16 +210,7 @@ class Simulator:
         self.__current_state_shape = state.shape
         return state
     
-    # def __get_current_frame(self, position=None):
-    #     if position is None:
-    #         position = self.agent.position
 
-    #     frame = self.objective - position
-    #     for body in self.bodies:
-    #         if body != self.agent:
-    #             frame = np.concatenate((frame, body.position - position))
-    #     return frame
-        
     def __get_current_frame(self, given_position=None):
         if given_position is None:
             given_position = self.agent.position

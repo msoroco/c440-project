@@ -1,4 +1,4 @@
-## c440-project
+## A SpaceQ Rocket explores Deep Space with Deep Q-Networks
 
 # Deep Q-Learning
 
